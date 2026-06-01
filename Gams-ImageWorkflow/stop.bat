@@ -9,7 +9,7 @@ if exist app.pid (
     echo Da tat an toan cac tien trinh thuoc ve tool nay.
 ) else (
     echo Khong tim thay file app.pid. Se thu tim bang ten cua so...
-    taskkill /FI "WINDOWTITLE eq Tool Auto Content*" /T /F >NUL 2>&1
+    taskkill /FI "WINDOWtitle Gams Image Workflow v1.0.0
     echo Da don dep dua tren ten cua so.
 )
 

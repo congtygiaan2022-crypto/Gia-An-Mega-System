@@ -1,6 +1,6 @@
 # FB Copyright Checker
 
-A modular Python tool that logs into Facebook with Selenium, scans your profile posts for copyright-related keywords, logs everything to SQLite, and can automatically delete flagged posts.
+Gams Fb Copyright Checker (v1.0.0)
 
 ## Project Structure
 

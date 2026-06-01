@@ -1,7 +1,7 @@
 [
   {
     "id": "task_1",
-    "name": "B\u00e1o c\u00e1o Ads TikTok h\u1eb1ng ng\u00e0y",
+    "name": "Gams Ai Jarvis Os",
     "plugin": "bao_cao_ads_tiktok",
     "schedule": "07:00",
     "accounts": {
@@ -12,7 +12,7 @@
   },
   {
     "id": "task_b7b93320",
-    "name": "B\u00e1o c\u00e1o Facebook Ads",
+    "name": "Gams Ai Jarvis Os",
     "description": "B\u00e1o c\u00e1o chi ti\u00eau Facebook Ads h\u00e0ng ng\u00e0y",
     "plugin": "bao_cao_facebook_ads",
     "schedule": "07:00",
@@ -23,14 +23,14 @@
   },
   {
     "id": "task_insight_daily",
-    "name": "Đọc Insight Fanpage",
+    "name": "Gams Ai Jarvis Os",
     "plugin": "gams_insight_reader",
     "schedule": "07:00",
     "status": "active"
   },
   {
     "id": "task_telegram_bot_monitor",
-    "name": "Giám sát Dịch vụ Bot Telegram",
+    "name": "Gams Ai Jarvis Os",
     "plugin": "jarvis_telegram_report_assistant",
     "schedule": "60 phút",
     "status": "active"

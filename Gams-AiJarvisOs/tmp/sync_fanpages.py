@@ -3,7 +3,7 @@ import os
 import urllib.parse
 
 SOURCE_DB = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')), 'Gams-AutoPostFanpage', 'database.json')
-TARGET_LINKS = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')), 'Gams-AiJarvisOs', 'javis-agent/plugins/data/gams_insight/links.json')
+TARGET_LINKS = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', '..')), 'Gams Ai Jarvis Os', 'javis-agent/plugins/data/gams_insight/links.json')
 BUSINESS_ID = "1016985112612772"
 
 def sync():

@@ -1,3 +1,3 @@
 @echo off
-pm2 logs "Gams-ToolAutoBcgame"
+pm2 logs "Gams Tool Auto Bcgame"
 pause

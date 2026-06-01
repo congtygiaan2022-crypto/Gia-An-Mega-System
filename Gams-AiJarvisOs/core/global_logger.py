@@ -5,7 +5,7 @@ import uuid
 import datetime
 import traceback
 
-# Root directory is E:\Gams-AiJarvisOs
+# Root directory is E:\Gams Ai Jarvis Os
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 LOG_DIR = os.path.join(ROOT_DIR, "logs")
 

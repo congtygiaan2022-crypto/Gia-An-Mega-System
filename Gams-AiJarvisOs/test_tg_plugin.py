@@ -2,7 +2,7 @@ import sys
 import os
 
 # Add the javis-agent path to sys.path
-sys.path.append(os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')), 'Gams-AiJarvisOs', 'javis-agent'))
+sys.path.append(os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')), 'Gams Ai Jarvis Os', 'javis-agent'))
 
 from plugins.jarvis_telegram_report_assistant import Plugin
 

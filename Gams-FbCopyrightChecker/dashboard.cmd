@@ -1,3 +1,3 @@
 @echo off
-pm2 logs "Gams-FbCopyrightChecker"
+pm2 logs "Gams Fb Copyright Checker"
 pause

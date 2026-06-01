@@ -1,6 +1,6 @@
 @echo off
 cd /d "%~dp0"
-title Jarvis_Dashboard
+title Gams Ai Jarvis Os v1.0.0
 chcp 65001 > nul
 set PYTHONIOENCODING=utf-8
 :start

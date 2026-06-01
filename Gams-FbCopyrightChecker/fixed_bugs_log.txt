@@ -7,11 +7,12 @@ FIX: Thêm hàm _is_logged_in(driver) trước hàm login() — kiểm tra URL v
 === [2026-05-22 00:22] ===
 BUG: ModuleNotFoundError: No module named 'bug_tracker'
 FILE: modules\copyright_checker.py:15
-FIX: Đổi import bug_tracker thành rom modules import bug_tracker (module nằm trong thư mục modules/)
+FIX: Đổi import bug_tracker thành 
+rom modules import bug_tracker (module nằm trong thư mục modules/)
 ---
 === [2026-05-22 00:22] ===
 BUG: NameError: name 'get_logger' is not defined
 FILE: modules\copyright_checker.py:19
-FIX: Thêm import thiếu rom modules.logger import get_logger
+FIX: Thêm import thiếu 
+rom modules.logger import get_logger
 ---
-

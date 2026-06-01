@@ -70,7 +70,7 @@ def main():
     trigger_tiktok()
     trigger_youtube()
     trigger_bcgame()
-    print("Hoàn tất tạo lỗi! Hãy kiểm tra file E:\\Gams-AiJarvisOs\\logs\\find_bug.json")
+    print("Hoàn tất tạo lỗi! Hãy kiểm tra file E:\\Gams Ai Jarvis Os\\logs\\find_bug.json")
 
 if __name__ == "__main__":
     main()

@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title Shopee Backlink Tool
+title Gams Backlink Shopee v1.0.0
 
 echo.
 echo ====================================================

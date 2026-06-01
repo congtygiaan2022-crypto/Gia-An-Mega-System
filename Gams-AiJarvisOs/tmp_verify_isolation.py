@@ -3,7 +3,7 @@ import sys
 import subprocess
 import time
 
-PROJECT_ROOT = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')), 'Gams-AiJarvisOs', 'javis-agent')
+PROJECT_ROOT = os.path.join(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..')), 'Gams Ai Jarvis Os', 'javis-agent')
 os.chdir(PROJECT_ROOT)
 
 print("Starting verification test for Isolated Runner...")

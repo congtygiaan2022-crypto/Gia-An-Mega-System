@@ -10,7 +10,7 @@ import os
 import subprocess
 
 # CẤU HÌNH ĐƯỜNG DẪN GIT CẬP NHẬT
-GIT_REPO_URL = "https://github.com/congtygiaan2022-crypto/Gams-TiktokDownloader.git"
+GIT_REPO_URL = "https://github.com/congtygiaan2022-crypto/Gams Tiktok Downloader.git"
 
 def get_requirements_content():
     if os.path.exists("requirements.txt"):

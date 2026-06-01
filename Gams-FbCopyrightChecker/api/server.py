@@ -24,7 +24,7 @@ log = get_logger(__name__)
 app = FastAPI(
     title="FB Copyright Checker — Agent API",
     description="REST API để điều khiển AI agent kiểm tra vi phạm bản quyền Facebook",
-    version="2.0.0",
+    version = "v1.0.0",
 )
 
 app.add_middleware(

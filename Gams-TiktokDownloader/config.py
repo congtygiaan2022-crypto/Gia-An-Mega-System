@@ -2,7 +2,7 @@ import os
 
 # Cấu hình GemLogin API
 GEMLOGIN_API_URL = "http://localhost:1010"
-API_VERSION = "v1"
+API_VERSION = "v1.0.0"
 
 # Đường dẫn
 LOG_FILE = "automation.log"

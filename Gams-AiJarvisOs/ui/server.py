@@ -1044,7 +1044,7 @@ def run_plugin_manual(plugin_name: str):
         "gams_youtube_downloader": {"folder": "Gams-YoutubeDownloader", "command": "main.py"},
         "gams_tool_auto_bcgame": {"folder": "Gams-ToolAutoBcgame", "command": "main.py"},
         "gams_fb_copyright_checker": {"folder": "Gams-FbCopyrightChecker", "command": "main.py"},
-        "gams_insight_reader": {"folder": "Gams-AiJarvisOs", "command": "test_insight_reader.py"}
+        "gams_insight_reader": {"folder": "Gams Ai Jarvis Os", "command": "test_insight_reader.py"}
     }
     
     if plugin_name not in project_map:

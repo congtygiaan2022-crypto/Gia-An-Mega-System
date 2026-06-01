@@ -1,4 +1,4 @@
-# BUGFIX LOG — Tool_auto_bcgame
+# Gams Tool Auto Bcgame (v1.0.0)
 
 ## [2026-05-22 13:55] Lần 19 — _log thread-unsafe, btn_check_login missing, _run_loop UI calls
 
@@ -234,4 +234,3 @@
 |------|--------|-------|-----------|
 | `core/selector.py` | HIGH | Nhận diện trận đấu và so khớp tên giữa Wap.vn (tiếng Việt) và BCGame (tiếng Anh) dễ bị lỗi hoặc bỏ sót do khác biệt ngôn ngữ, viết tắt và dấu tiếng Việt (ví dụ: "Thụy Điển" vs "Sweden", "M.U" vs "Manchester United"). | Thêm `strip_diacritics` để loại bỏ dấu tiếng Việt; tích hợp bộ từ điển `TRANSLATIONS` dịch từ tiếng Việt/viết tắt sang tiếng Anh/tên đầy đủ; sắp xếp từ khóa dịch theo độ dài giảm dần để tránh dịch đè từ ngắn trong từ dài (ví dụ: "viet nam" -> "vietnam" trước khi dịch "nam"); cập nhật `find_best_match_in_list` và `normalize_name` để sử dụng bộ chuẩn hóa này. |
 | `core/scraper.py` | HIGH | `search_match` trên BCGame chỉ dùng tên đội gốc từ Wap.vn nên không tìm thấy các đội được dịch sang tiếng Việt (như "Thụy Điển", "Ý"). | Tích hợp `normalize_name` vào `search_match`; thêm cả tên gốc tiếng Việt và tên tiếng Anh đã dịch/chuẩn hóa vào danh sách từ khóa tìm kiếm (`search_queries`) để tăng tối đa khả năng tìm thấy trận đấu trên BCGame. |
-

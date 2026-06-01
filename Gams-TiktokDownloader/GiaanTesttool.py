@@ -18,7 +18,7 @@ except:
 class GiaanTool:
     def __init__(self, root):
         self.root = root
-        self.root.title("GiaanTesttool - Automation")
+        self.roottitle("Gams Tiktok Downloader v1.0.0")
         self.root.geometry("500x700") # Increased height
         self.root.configure(bg="#1e1e1e")
         
@@ -63,7 +63,7 @@ class GiaanTool:
         h_frame.grid_columnconfigure(1, weight=0)
         h_frame.grid_columnconfigure(2, weight=1)
 
-        self.header_label = tk.Label(h_frame, text="GiaanTesttool", font=("Segoe UI", 18, "bold"), fg="#4CAF50")
+        self.header_label = tk.Label(h_frame, text="Gams Tiktok Downloader v1.0.0", font=("Segoe UI", 18, "bold"), fg="#4CAF50")
         self.header_label.grid(row=0, column=1)
         
         # Theme Button (Right aligned)
@@ -159,7 +159,7 @@ class GiaanTool:
         # Threads
         f1 = ttk.Frame(frame)
         f1.pack(fill="x", pady=5)
-        ttk.Label(f1, text="Số luồng Download:").pack(side="left")
+        ttk.Label(f1, text="Gams Tiktok Downloader v1.0.0").pack(side="left")
         ttk.Entry(f1, textvariable=self.download_threads, width=5).pack(side="right")
         
         f2 = ttk.Frame(frame)

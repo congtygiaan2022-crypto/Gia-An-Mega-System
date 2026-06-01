@@ -1,4 +1,4 @@
-HƯỚNG DẪN CÀI ĐẶT TOOL TRÊN MÁY MỚI
+Gams Tiktok Downloader (v1.0.0)
 ======================================
 
 Để chạy được tool này trên một máy tính mới, bạn cần cài đặt các phần mềm sau theo thứ tự:

@@ -1,4 +1,4 @@
-# Extensions folder for Jarvis Browser Engine
+# Gams Ai Jarvis Os (v1.0.0)
 # Drop unpacked Chrome extensions here to auto-load them on browser start.
 #
 # HOW TO INSTALL AN EXTENSION:

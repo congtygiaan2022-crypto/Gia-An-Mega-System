@@ -41,7 +41,7 @@ class Validator(HTMLParser):
 
 def main():
     try:
-        with open('e:/Gams-AiJarvisOs/ui/advanced_dashboard.html', 'r', encoding='utf-8') as f:
+        with open('e:/Gams Ai Jarvis Os/ui/advanced_dashboard.html', 'r', encoding='utf-8') as f:
             html = f.read()
     except Exception as e:
         print(f"Error reading file: {e}")

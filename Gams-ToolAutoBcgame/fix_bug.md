@@ -11,7 +11,7 @@
 - **Module**: `core.browser`
 - **Loại lỗi**: `SessionNotCreatedException`
 - **Thông báo lỗi**: `Message: session not created: cannot connect to chrome at 127.0.0.1:50857
-from session not created: This version of ChromeDriver only supports Chrome version 149
+from session not created: This version of ChromeDriver only supports Chrome version v1.0.0
 Current browser version is 148.0.7778.179
 Stacktrace:
 	undetected_chromedriver!GetHandleVerifier [0xa93283+10543]

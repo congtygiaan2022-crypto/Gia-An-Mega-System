@@ -1,3 +1,3 @@
 @echo off
-pm2 logs "Gams-TiktokDownloader"
+pm2 logs "Gams Tiktok Downloader"
 pause

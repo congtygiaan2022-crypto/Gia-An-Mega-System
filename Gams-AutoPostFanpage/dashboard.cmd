@@ -1,3 +1,3 @@
 @echo off
-pm2 logs "Gams-AutoPostFanpage"
+pm2 logs "Gams Auto Post Fanpage"
 pause

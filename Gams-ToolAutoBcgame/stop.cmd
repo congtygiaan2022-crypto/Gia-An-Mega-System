@@ -1,3 +1,3 @@
 @echo off
-pm2 stop "Gams-ToolAutoBcgame"
+pm2 stop "Gams Tool Auto Bcgame"
 pause

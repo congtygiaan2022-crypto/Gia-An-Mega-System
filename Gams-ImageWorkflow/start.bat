@@ -1,5 +1,5 @@
 @echo off
-title Tool Auto Content - Dashboard Server
+title Gams Image Workflow v1.0.0
 echo Dang khoi dong Web Dashboard...
 echo Vui long doi giay lat...
 call .\venv\Scripts\activate.bat

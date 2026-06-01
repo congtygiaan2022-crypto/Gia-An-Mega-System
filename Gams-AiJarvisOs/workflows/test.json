@@ -1,10 +1,10 @@
 {
-    "name": "test",
+    "name": "Gams Ai Jarvis Os",
     "description": "test",
     "steps": [
         {
             "plugin": "bao_cao_ads_tiktok",
-            "name": "bao_cao_ads_tiktok (Step 1)",
+            "name": "Gams Ai Jarvis Os",
             "args": {}
         }
     ]

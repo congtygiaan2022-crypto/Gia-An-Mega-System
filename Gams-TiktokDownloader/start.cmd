@@ -1,4 +1,4 @@
 @echo off
 cd /d "%~dp0"
-pm2 start main.py --name "Gams-TiktokDownloader" --interpreter python
+pm2 start main.py --name "Gams Tiktok Downloader" --interpreter python
 pause
