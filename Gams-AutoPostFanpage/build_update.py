@@ -49,7 +49,7 @@ def build_package():
     print("=========================================")
     
     # 1. Đọc version hiện tại và tăng phiên bản
-    local_version = "2.1"
+    local_version = "1.0.0"
     if os.path.exists(VERSION_FILE):
         try:
             with open(VERSION_FILE, "r", encoding="utf-8") as f:
@@ -59,7 +59,7 @@ def build_package():
     try:
         new_version = str(round(float(local_version) + 0.1, 2))
     except:
-        new_version = "2.2"
+        new_version = "1.1.0"
         
     print(f"-> Phiên bản cũ: {local_version}")
     user_input = input(f"-> Nhập phiên bản mới (Nhấn Enter để chọn {new_version}): ").strip()

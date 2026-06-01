@@ -21,7 +21,7 @@ SERVER_PORT = 8000
 
 SERVER_JSON_URL = f"http://{SERVER_IP}:{SERVER_PORT}/version.json"
 VERSION_FILE = "current_version.json"
-DEFAULT_VERSION = "2.1"
+DEFAULT_VERSION = "1.0.0"
 
 def get_current_local_version():
     if os.path.exists(VERSION_FILE):

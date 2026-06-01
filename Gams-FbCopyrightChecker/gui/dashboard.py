@@ -953,7 +953,7 @@ class App(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.title("FB Copyright Checker v3")
+        self.title("FB Copyright Checker v1.0.0")
         self.geometry("1140x700")
         self.minsize(940, 600)
         self.configure(fg_color=C_BG)

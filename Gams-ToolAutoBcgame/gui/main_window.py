@@ -25,7 +25,7 @@ class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        self.title("BCGAME PRO AUTO-BETTING V3")
+        self.title("BCGAME PRO AUTO-BETTING V1.0.0")
         self.geometry("1150x800")
         
         ctk.set_appearance_mode("dark")
