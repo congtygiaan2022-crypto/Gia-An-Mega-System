@@ -1,0 +1,13 @@
+{
+  "errors": [
+    {
+      "plugin": "bao_cao_facebook_ads",
+      "task_id": "task_b7b93320",
+      "run_id": "run_de2f3d8b",
+      "timestamp": 1780272014.6452148,
+      "error_type": "ModuleNotFoundError",
+      "message": "No module named 'plugins.bao_cao_facebook_ads'",
+      "traceback": "Traceback (most recent call last):\n  File \"E:\\Gams-AiJarvisOs\\core\\isolated_runner.py\", line 113, in main\n    module = importlib.import_module(f\"plugins.{plugin_name}\")\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"C:\\Users\\admin\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\importlib\\__init__.py\", line 126, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1204, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1176, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1140, in _find_and_load_unlocked\nModuleNotFoundError: No module named 'plugins.bao_cao_facebook_ads'\n"
+    }
+  ]
+}

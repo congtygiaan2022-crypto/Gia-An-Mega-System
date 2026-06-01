@@ -1,0 +1,11 @@
+{
+    "name": "test",
+    "description": "test",
+    "steps": [
+        {
+            "plugin": "bao_cao_ads_tiktok",
+            "name": "bao_cao_ads_tiktok (Step 1)",
+            "args": {}
+        }
+    ]
+}

@@ -1,0 +1,7 @@
+2026/03/17-07:00:18.196 18abc Reusing MANIFEST H:\Tool_tucode\AI_Javis_Manus2\javis-agent\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/MANIFEST-000001
+2026/03/17-07:00:18.205 18abc Recovering log #42
+2026/03/17-07:00:18.217 18abc Level-0 table #46: started
+2026/03/17-07:00:18.321 18abc Level-0 table #46: 1080800 bytes OK
+2026/03/17-07:00:18.326 18abc Recovering log #45
+2026/03/17-07:00:18.337 18abc Level-0 table #47: started
+2026/03/17-07:00:18.378 18abc Level-0 table #47: 0 bytes IO error: H:\Tool_tucode\AI_Javis_Manus2\javis-agent\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/000047.ldb: Unable to create writable file (ChromeMethodBFE: 9::NewWritableFile::16)

@@ -1,0 +1,19 @@
+{
+    "plugins": [
+        "bao_cao_ads_tiktok",
+        "test_plugin",
+        "fake_test_tool",
+        "fix_GamsInsightReader",
+        "fix_PluginRegistry",
+        "gams_insight_reader",
+        "jarvis_telegram_report_assistant",
+        "fix_gams_insight_reader",
+        "fix_jarvis_telegram_report_assistant",
+        "gams_auto_post_fanpage",
+        "gams_auto_post_profile",
+        "gams_tiktok_downloader",
+        "gams_youtube_downloader",
+        "gams_tool_auto_bcgame",
+        "gams_fb_copyright_checker"
+    ]
+}

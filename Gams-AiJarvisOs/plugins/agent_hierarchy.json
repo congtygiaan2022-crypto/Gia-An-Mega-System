@@ -1,0 +1,15 @@
+{
+    "Jarvis OS - AI agent dashbroad": {
+        "AI Agent Phân tích và đưa ra giải pháp": [
+            "bao_cao_ads_tiktok"
+        ],
+        "AI Agent Báo cáo": [
+            "jarvis_telegram_report_assistant",
+            "gams_insight_reader"
+        ],
+        "AI Agent Automation": [],
+        "AI Agent Auto fix bug": [
+            "fake_test_tool"
+        ]
+    }
+}

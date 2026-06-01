@@ -1,0 +1,1467 @@
+{
+  "runs": [
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_ee96698c",
+      "timestamp": 1773117242.6760516,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_a31974bc",
+      "timestamp": 1773117813.9975379,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_31b4f679",
+      "timestamp": 1773117827.8157916,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_7efc0599",
+      "timestamp": 1773154184.536759,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_7f0fbbaa",
+      "timestamp": 1773154456.4524086,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_b44ba6bd",
+      "timestamp": 1773156962.8051734,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_2b9179df",
+      "timestamp": 1773205421.1709569,
+      "status": "success"
+    },
+    {
+      "plugin": "test_dummy",
+      "task_id": "test_task_456",
+      "run_id": "test_run_123",
+      "timestamp": 1773652065.6212752,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "test_task_123",
+      "run_id": "test_run_gams_",
+      "timestamp": 1773652480.6472323,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "test_task_123",
+      "run_id": "test_run_jarvi",
+      "timestamp": 1773652484.2637727,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_007ef3d3",
+      "timestamp": 1773652527.6877108,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_6b39f60a",
+      "timestamp": 1773652542.9037914,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "test_task_final",
+      "run_id": "test_run_final",
+      "timestamp": 1773653764.5113947,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_71b56b02",
+      "timestamp": 1773654038.9903183,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_542e0cea",
+      "timestamp": 1773655328.9854188,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_98aa75a7",
+      "timestamp": 1773655940.1011095,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f405dda4",
+      "timestamp": 1773659540.8950696,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_0c17ec3b",
+      "timestamp": 1773663141.2287734,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_cea87d2d",
+      "timestamp": 1773666741.8414996,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_80e3a43c",
+      "timestamp": 1773670342.327598,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_ae66ccda",
+      "timestamp": 1773673942.6061974,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_b68cb8fd",
+      "timestamp": 1773677542.922564,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_971d2f9c",
+      "timestamp": 1773681143.2574975,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f985961c",
+      "timestamp": 1773684743.484673,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_bfe81019",
+      "timestamp": 1773688343.9425874,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_2494fa84",
+      "timestamp": 1773691944.19476,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_8f1d913e",
+      "timestamp": 1773695544.488739,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_9f6e5744",
+      "timestamp": 1773699144.8681755,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_b76b20b7",
+      "timestamp": 1773702745.1266081,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_236dd8ef",
+      "timestamp": 1773705606.829661,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_24109d2b",
+      "timestamp": 1773706345.496418,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_faefbc80",
+      "timestamp": 1773706374.4290192,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_0124cc4e",
+      "timestamp": 1773709945.6782522,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_8ad64281",
+      "timestamp": 1773713545.965009,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f80c7abf",
+      "timestamp": 1773717304.2236545,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_0b360977",
+      "timestamp": 1773717340.9066327,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_ce3b0ec9",
+      "timestamp": 1773718377.4921162,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_289e0501",
+      "timestamp": 1773720012.1076462,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_5a067a6f",
+      "timestamp": 1773720041.7941551,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_c9c00579",
+      "timestamp": 1773792005.5323303,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_0300977e",
+      "timestamp": 1773792672.2860227,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_1967bfbb",
+      "timestamp": 1773878411.51024,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_a5086c06",
+      "timestamp": 1773879172.999725,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_befb2718",
+      "timestamp": 1774022666.0436041,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_c2638f14",
+      "timestamp": 1774051212.3163073,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_edfb18a9",
+      "timestamp": 1774052706.41057,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_1d34fa06",
+      "timestamp": 1774569608.1579683,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_799beea7",
+      "timestamp": 1774571084.5234005,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_c95ffc73",
+      "timestamp": 1774656004.5842555,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_8f29fe4e",
+      "timestamp": 1774657403.343071,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_625ade7f",
+      "timestamp": 1774742412.2439494,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_cb0699be",
+      "timestamp": 1774743891.1252189,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_8fe38641",
+      "timestamp": 1774828808.6340134,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_eabed89f",
+      "timestamp": 1774830339.732018,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_40a1a2fe",
+      "timestamp": 1774915205.652151,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_55f92ffc",
+      "timestamp": 1774916575.253621,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_820414d9",
+      "timestamp": 1774951935.1479542,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_c3df0cb6",
+      "timestamp": 1775001612.4909327,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_a1158d34",
+      "timestamp": 1775002998.0842283,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_97df0a2a",
+      "timestamp": 1775088010.5344753,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_0eb5cb4e",
+      "timestamp": 1775089403.526613,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_1a3ef1f3",
+      "timestamp": 1775107714.211125,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_f7c76be6",
+      "timestamp": 1775174409.7650928,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_57716de9",
+      "timestamp": 1775175737.054919,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_6676a927",
+      "timestamp": 1775260808.494981,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_03d3f24f",
+      "timestamp": 1775262297.717517,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_495b744d",
+      "timestamp": 1775347206.3791168,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_25952327",
+      "timestamp": 1775348601.4139652,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_08464c6f",
+      "timestamp": 1775433614.9915464,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_19595626",
+      "timestamp": 1775435137.6427748,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_796db80e",
+      "timestamp": 1775520014.6115935,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_4e76e8ff",
+      "timestamp": 1775521530.6347072,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_3ae9cba9",
+      "timestamp": 1775606411.4717324,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_d7c05b77",
+      "timestamp": 1775607800.1632605,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_ae16804f",
+      "timestamp": 1775692809.5766258,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_fab76518",
+      "timestamp": 1775694166.0246396,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_37db9782",
+      "timestamp": 1775779208.6817486,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_38748302",
+      "timestamp": 1775780498.4249053,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_e4a15482",
+      "timestamp": 1775865606.3104465,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_3d4c8b23",
+      "timestamp": 1775867048.8089366,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_4ae2fa11",
+      "timestamp": 1775952021.738953,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_74e76b73",
+      "timestamp": 1775953343.3856583,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_fc2f3d87",
+      "timestamp": 1776038415.5900486,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_5279af19",
+      "timestamp": 1776039792.8359296,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_28b1bdf8",
+      "timestamp": 1776124817.3864572,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_4149d33a",
+      "timestamp": 1776126189.0636225,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_cff07c58",
+      "timestamp": 1776211220.5794525,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_6a4c6cf6",
+      "timestamp": 1776212612.8705318,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_b087911e",
+      "timestamp": 1776297607.226232,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_25b6a4a9",
+      "timestamp": 1776298970.6180904,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_f0d39be0",
+      "timestamp": 1776384006.8194258,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_6abff923",
+      "timestamp": 1776385376.5347934,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_918e92e3",
+      "timestamp": 1776470407.2236772,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_51184f32",
+      "timestamp": 1776471912.9176068,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_bc3ef3f0",
+      "timestamp": 1776556808.0977602,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_ef3309f4",
+      "timestamp": 1776558261.3711812,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_081a41bc",
+      "timestamp": 1776643211.208936,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_501d46d1",
+      "timestamp": 1776644621.8258529,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_ce691209",
+      "timestamp": 1776729608.8127406,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_6f408098",
+      "timestamp": 1776731064.111259,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_44875041",
+      "timestamp": 1776816007.2070148,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_59d4bc09",
+      "timestamp": 1776817369.4917517,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_821cb913",
+      "timestamp": 1776902417.218805,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_cc343b1a",
+      "timestamp": 1776903222.9140651,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_72075260",
+      "timestamp": 1776988808.4791229,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_1997085c",
+      "timestamp": 1776993157.975023,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_b91c2248",
+      "timestamp": 1777075207.0433018,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_2fbd7455",
+      "timestamp": 1777076657.4431942,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_72af3e2a",
+      "timestamp": 1777161614.2063458,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_8b524ce1",
+      "timestamp": 1777162851.8813615,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_c51d99fb",
+      "timestamp": 1777593609.7301939,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f31f74c9",
+      "timestamp": 1777593899.032997,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_1151df7d",
+      "timestamp": 1777619103.2310133,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_996d4946",
+      "timestamp": 1777644300.048235,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_e919c9ae",
+      "timestamp": 1777680005.651093,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_6fe22078",
+      "timestamp": 1777680310.5868232,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_ac917547",
+      "timestamp": 1777681535.00479,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_2dcbf64a",
+      "timestamp": 1777694706.681882,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_aa7eb93d",
+      "timestamp": 1777727109.7386003,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_72a664cd",
+      "timestamp": 1777766411.0308802,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_3ca07893",
+      "timestamp": 1777767766.3362465,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_db5ea49f",
+      "timestamp": 1777770309.3675122,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_273d2528",
+      "timestamp": 1777788311.7305353,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_c57f6935",
+      "timestamp": 1777802716.008609,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_c4d8cd5b",
+      "timestamp": 1777806311.9035795,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_95e19b5a",
+      "timestamp": 1777809915.395815,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_5c90734d",
+      "timestamp": 1777852807.6703036,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_78cbc424",
+      "timestamp": 1777854223.2153044,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_e690df0f",
+      "timestamp": 1777939203.9850223,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_1870d8ec",
+      "timestamp": 1777940644.4122958,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_6adbfe7f",
+      "timestamp": 1778025611.2211163,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_5f70f132",
+      "timestamp": 1778026967.8004682,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_f60096b0",
+      "timestamp": 1778112007.6871731,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_1fa9624a",
+      "timestamp": 1778113381.4313781,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_de369fc8",
+      "timestamp": 1778198405.4524894,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_aeadf434",
+      "timestamp": 1778199785.4470558,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_a19da950",
+      "timestamp": 1778284812.3344803,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_13a7fff5",
+      "timestamp": 1778286090.5317817,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_0a220643",
+      "timestamp": 1779740564.873779,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_125fb9bc",
+      "timestamp": 1779744164.331622,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_98fddd77",
+      "timestamp": 1779747764.3583605,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_ef36c268",
+      "timestamp": 1779751364.7121224,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_1eb3d943",
+      "timestamp": 1779753608.366101,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_6894c7f1",
+      "timestamp": 1779754497.3196719,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f9b65bef",
+      "timestamp": 1779754964.9887567,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_bf91ee78",
+      "timestamp": 1779758565.1935964,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_144e6f18",
+      "timestamp": 1779762165.319699,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_fad9d8d4",
+      "timestamp": 1779765765.487037,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_6b95d9f1",
+      "timestamp": 1779769365.8286953,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_280e9c55",
+      "timestamp": 1779772965.8482099,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_889bf55a",
+      "timestamp": 1779776566.1827748,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f15bcaf7",
+      "timestamp": 1779780166.2983716,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_17ae6d06",
+      "timestamp": 1779783766.5693717,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_d33d1599",
+      "timestamp": 1779787366.8369257,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_2ab171f7",
+      "timestamp": 1779790967.0599234,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_595662fc",
+      "timestamp": 1779794567.2790983,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_8aa96b55",
+      "timestamp": 1779798167.4526463,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_9e839ee9",
+      "timestamp": 1779801767.3278608,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_368ea113",
+      "timestamp": 1779805367.581346,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_85d24933",
+      "timestamp": 1779808967.5947678,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_2def886f",
+      "timestamp": 1779817009.9988809,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_8d70a4f3",
+      "timestamp": 1779820609.807864,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_3831c4e1",
+      "timestamp": 1779824210.52744,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_d3567750",
+      "timestamp": 1779827814.8717449,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_d6e3d560",
+      "timestamp": 1779831414.998135,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_30be83ba",
+      "timestamp": 1779835015.3191109,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_358b21c8",
+      "timestamp": 1779838615.5214791,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_b47a8453",
+      "timestamp": 1779840933.480347,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_bb8404ce",
+      "timestamp": 1779842215.6976569,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_738e583e",
+      "timestamp": 1779845815.9454758,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_b10684c9",
+      "timestamp": 1779846487.6408837,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_646e9809",
+      "timestamp": 1779853016.0837448,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f521dc91",
+      "timestamp": 1779856616.2882764,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_699e5b87",
+      "timestamp": 1779860216.450358,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_b67d1de7",
+      "timestamp": 1779863816.699868,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_064abf64",
+      "timestamp": 1779867416.7943208,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_22f84ac3",
+      "timestamp": 1779871016.9123118,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_f380a9e2",
+      "timestamp": 1779874617.1580744,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_b0599f2d",
+      "timestamp": 1779878217.4746463,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_ed6ede17",
+      "timestamp": 1779885417.9917495,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_078914c3",
+      "timestamp": 1779889017.9017727,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_bfd39390",
+      "timestamp": 1779892618.167201,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_8166026d",
+      "timestamp": 1779896218.355463,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_28b999bc",
+      "timestamp": 1779899818.5652678,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_b54c2f41",
+      "timestamp": 1779903418.7996883,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_be423dfd",
+      "timestamp": 1779907019.0243933,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_0b6f1e06",
+      "timestamp": 1779910619.1016936,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_98c1b1f4",
+      "timestamp": 1779914219.3772268,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_702a1d8e",
+      "timestamp": 1779917819.5436165,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_4a7b5c36",
+      "timestamp": 1779921419.6802404,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_761fc381",
+      "timestamp": 1779925019.9988625,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_94e1873d",
+      "timestamp": 1779926413.2572353,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_a9cbaec7",
+      "timestamp": 1779927278.214141,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_e178eceb",
+      "timestamp": 1779928620.0642054,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_1e3d99ef",
+      "timestamp": 1779932220.289827,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_6c5f5469",
+      "timestamp": 1779935820.4314482,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_be7f0de8",
+      "timestamp": 1779939420.70911,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_e4cc5867",
+      "timestamp": 1779946621.0522509,
+      "status": "success"
+    },
+    {
+      "plugin": "jarvis_telegram_report_assistant",
+      "task_id": "task_telegram_bot_monitor",
+      "run_id": "run_3603bc77",
+      "timestamp": 1779950221.314682,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_1f238f85",
+      "timestamp": 1780079738.5998747,
+      "status": "success"
+    },
+    {
+      "plugin": "fake_test_tool",
+      "task_id": "task_auto_fake_test_tool",
+      "run_id": "run_1308f326",
+      "timestamp": 1780080537.1367822,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_26100328",
+      "timestamp": 1780099209.2047427,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_ddc37743",
+      "timestamp": 1780100569.217657,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_0e3959af",
+      "timestamp": 1780166666.7860968,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_675ebc46",
+      "timestamp": 1780185610.4802558,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_4812ecb3",
+      "timestamp": 1780187206.814669,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_672b7b29",
+      "timestamp": 1780245319.68945,
+      "status": "success"
+    },
+    {
+      "plugin": "bao_cao_ads_tiktok",
+      "task_id": "task_1",
+      "run_id": "run_f9a5c423",
+      "timestamp": 1780272016.0473325,
+      "status": "success"
+    },
+    {
+      "plugin": "gams_insight_reader",
+      "task_id": "task_insight_daily",
+      "run_id": "run_e59f7be2",
+      "timestamp": 1780274462.9519975,
+      "status": "success"
+    }
+  ]
+}

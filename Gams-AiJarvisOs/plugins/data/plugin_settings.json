@@ -1,0 +1,21 @@
+{
+    "jarvis_telegram_report_assistant": {
+        "token": "8366082259:AAGnQl5B1v8Ypwn8Zorh8-9mhb5GBi9ZFx0",
+        "owners": [
+            "8421265570",
+            "1005896929"
+        ],
+        "commands": {
+            "status": "📊 Tình trạng máy chủ (với biểu đồ).",
+            "analyze": "🔍 Phân tích hệ thống bằng GPT.",
+            "desktop_apps": "📋 Xem các cửa sổ Windows đang mở.",
+            "apps_csv": "📄 Xuất CSV danh sách tiến trình.",
+            "baocaofanpage": "📊 Báo cáo Insight Facebook.",
+            "ping": "🏓 Kiểm tra bot còn sống không.",
+            "restart": "🔄 Khởi động lại bot (owner).",
+            "adduser": "👤 Thêm user được phép (owner).",
+            "help": "❓ Danh sách lệnh.",
+            "kill": "🔪 Tắt một ứng dụng theo PID hoặc tên."
+        }
+    }
+}

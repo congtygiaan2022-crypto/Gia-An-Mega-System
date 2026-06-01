@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto AI Content Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1><span class="gradient-text">AI Fanpage</span> Studio</h1>
+            <p>Hệ thống Tự động hóa Tư duy AI & Đăng bài Đa luồng</p>
+        </header>
+
+        <!-- GLOBAL CONTROLS -->
+        <div class="global-controls glassmorphism">
+            <div class="controls-grid">
+                <!-- Vòng lặp & Luồng -->
+                <div class="control-group">
+                    <h3>🔄 Vòng lặp & Số luồng</h3>
+                    <div class="radio-group">
+                        <label><input type="radio" name="loop_type" value="1" checked> 1 Vòng</label>
+                        <label><input type="radio" name="loop_type" value="n"> 
+                            <input type="number" id="loop_count" value="5" min="1" style="width:50px" disabled> Vòng
+                        </label>
+                        <label><input type="radio" name="loop_type" value="infinite"> Vô hạn</label>
+                        
+                        <div style="margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">
+                            <label style="font-weight: 500;">
+                                Số luồng tối đa:
+                                <input type="number" id="max_threads" value="3" min="1" style="width:60px; margin-left: 5px;">
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Thời gian Delay -->
+                <div class="control-group">
+                    <h3>⏱ Nghỉ giữa vòng</h3>
+                    <div class="radio-group">
+                        <label><input type="radio" name="delay_type" value="fixed" checked> 
+                            Cố định <input type="number" id="delay_fixed" value="10" min="0" style="width:60px"> s
+                        </label>
+                        <label><input type="radio" name="delay_type" value="random_all"> 
+                            Random Tất cả: <input type="number" id="delay_rand_all_min" value="10" style="width:50px" disabled> - 
+                            <input type="number" id="delay_rand_all_max" value="60" style="width:50px" disabled> s
+                        </label>
+                        <label><input type="radio" name="delay_type" value="random_individual"> 
+                            Random Riêng lẻ: <input type="number" id="delay_rand_ind_min" value="10" style="width:50px" disabled> - 
+                            <input type="number" id="delay_rand_ind_max" value="60" style="width:50px" disabled> s
+                        </label>
+                        <label><input type="radio" name="delay_type" value="time"> 
+                            Giờ cố định: <input type="text" id="delay_times" placeholder="08:00, 15:30" disabled style="width:120px">
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Control Actions -->
+                <div class="control-actions-group">
+                    <h3>🎯 Điều khiển</h3>
+                    <div class="actions-wrapper">
+                        <button class="btn btn-save" onclick="saveGlobalConfig()">💾 LƯU CÀI ĐẶT</button>
+                        <button class="btn btn-start-all" onclick="startAll()">🚀 START ALL</button>
+                        <button class="btn btn-stop-all" onclick="stopAll()">🛑 STOP ALL</button>
+                        <button class="btn btn-stop-all" onclick="clearAllLogs()" style="background: linear-gradient(135deg, #4b5563 0%, #374151 100%); margin-top: 2px;">🧹 CLEAR ALL LOGS</button>
+                        <hr style="border: 0; border-top: 1px dashed rgba(255,255,255,0.1); margin: 0.5rem 0;" />
+                        <button class="btn btn-force-stop" onclick="forceStopTool()">‼ STOP SERVER</button>
+                        <button class="btn btn-restart" onclick="restartTool()">🔄 RESTART SERVER</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="grid">
+            <!-- Nút Add Profile -->
+            <div style="grid-column: 1 / -1; text-align: right; margin-bottom: 0.5rem;">
+                <button class="btn btn-start" onclick="createProfile()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">➕ THÊM PROFILE MỚI</button>
+            </div>
+            {% for profile in profiles %}
+            <div class="card glassmorphism" id="card-{{ profile }}">
+                <div class="card-header">
+                    <h2>{{ profile }}</h2>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <span class="status-badge status-idle" id="status-badge-{{ profile }}">Idle</span>
+                        <span id="countdown-{{ profile }}" style="font-size: 0.9rem; font-weight: 600; color: #f59e0b; font-family: monospace; min-width: 70px; text-align: right;"></span>
+                        <button class="btn-icon" onclick="openManualBrowser('{{ profile }}')" title="Mở trình duyệt thủ công">🌐</button>
+                        <button class="btn-icon" onclick="renameProfile('{{ profile }}')" title="Đổi tên Profile">✏️</button>
+                        <button class="btn-icon" onclick="deleteProfile('{{ profile }}')" title="Xóa Profile" style="color: #ef4444;">🗑️</button>
+                        <button class="btn-icon" onclick="openSettings('{{ profile }}')" title="Cài đặt Profile">⚙️</button>
+                    </div>
+                </div>
+                
+                <div class="console glassmorphism-inner" id="console-{{ profile }}">
+                    <ul id="log-list-{{ profile }}">
+                        <li>[Chờ khởi động...]</li>
+                    </ul>
+                </div>
+
+                <div class="card-actions">
+                    <button class="btn btn-start" onclick="startProfile('{{ profile }}')">▶ Start</button>
+                    <button class="btn btn-stop" onclick="stopProfile('{{ profile }}')">⏹ Stop</button>
+                    <button class="btn btn-stop" onclick="clearProfileLog('{{ profile }}')" style="max-width: 90px;" title="Xóa log của profile này">🧹 Clear</button>
+                </div>
+            </div>
+            {% endfor %}
+        </main>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content glassmorphism">
+            <div class="modal-header">
+                <h2 id="modal-title">Cài đặt Profile</h2>
+                <span class="close" onclick="closeSettings()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="settings-form">
+                    <div class="form-section">
+                        <label style="font-weight: bold; color: #10b981; margin-bottom: 1rem; display: block; font-size: 1.1rem; cursor: pointer;">
+                            <input type="checkbox" id="set_is_active" style="transform: scale(1.3); margin-right: 0.5rem; cursor: pointer;"> 
+                            Trạng thái: Đang hoạt động (Kích hoạt để chạy Auto)
+                        </label>
+                        <h4>📝 Cấu hình Text (AI Status)</h4>
+                        <label>Status mẫu cơ sở:</label>
+                        <textarea id="set_status_base" rows="3" placeholder="Nhập mẫu status..."></textarea>
+                        <label>Prompt viết status:</label>
+                        <textarea id="set_prompt_base" rows="3" placeholder="Ví dụ: Dựa vào thông tin sau hãy viết 1 đoạn văn..."></textarea>
+                        <label>Thư mục lưu Text kết quả (Output Text):</label>
+                        <input type="text" id="set_output_txt_dir" placeholder="Ví dụ: E:\Output\Text">
+                    </div>
+
+                    <div class="form-section">
+                        <h4>🖼 Cấu hình Ảnh</h4>
+                        <label>Nền tảng tạo Ảnh/Text:</label>
+                        <div class="radio-group" style="flex-direction: row; margin-bottom: 0.75rem;">
+                            <label><input type="radio" name="set_ai_source" value="google" checked> Google AI Studio</label>
+                            <label><input type="radio" name="set_ai_source" value="chatgpt"> ChatGPT</label>
+                        </div>
+                        <label>Thư mục ảnh mẫu (Input):</label>
+                        <input type="text" id="set_input_img_dir" placeholder="Ví dụ: E:\Input\Images">
+                        <label>Prompt tạo Ảnh mới:</label>
+                        <textarea id="set_prompt_img" rows="3" placeholder="Ví dụ: Tạo một bức ảnh phong cách anime..."></textarea>
+                        <label>Thư mục lưu Ảnh kết quả (Output Image):</label>
+                        <input type="text" id="set_output_img_dir" placeholder="Ví dụ: E:\Output\Images">
+                    </div>
+
+                    <div class="form-section">
+                        <h4>🌐 Cấu hình Đăng bài (Fanpage)</h4>
+                        <label>Tên Fanpage (Ghi nhớ):</label>
+                        <input type="text" id="set_fanpage_name" placeholder="Tên fanpage để dễ nhớ">
+                        <label>Đường link Fanpage:</label>
+                        <input type="text" id="set_fanpage_url" placeholder="https://business.facebook.com/latest/...">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-stop" onclick="closeSettings()">Hủy</button>
+                <button class="btn btn-start" onclick="saveSettings()">💾 Lưu Cài Đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

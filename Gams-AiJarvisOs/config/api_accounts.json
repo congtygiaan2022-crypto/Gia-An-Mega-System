@@ -1,0 +1,36 @@
+{
+  "facebook_ads": {
+    "fb_ads_A": {
+      "account_id": "",
+      "access_token": ""
+    },
+    "test1": {
+      "access_token": "test1",
+      "account_id": "test1"
+    },
+    "Ph\u1ea1m D\u0169ng Ads": {
+      "access_token": "EAABsbCS1iHgBQxbWVSeRrHLXnPyWgk2mVgAmHg71MyzB0Ohd06vYmGUNbEbDiRlqwIZCeZC3vceM1mrSVVeNGBRDYMbhDhBDadjnFqDLmvj3oIpQMB0RXjJD3OIJrC4zoIOgA7ZBAohONQSeW9xtkxQYnOiLLHqqgoLoHoT009s8WxKtot2oo9cfY9ruAZDZD",
+      "account_id": "1243609077707873"
+    }
+  },
+  "tiktok_ads": {
+    "tiktok_ads_A": {
+      "advertiser_id": "",
+      "access_token": ""
+    },
+    "test1": {
+      "access_token": "test1",
+      "advertiser_id": "test1"
+    }
+  },
+  "google_sheets": {
+    "sheet_A": {
+      "sheet_id": "",
+      "description": "Daily Ads Report"
+    },
+    "test1": {
+      "description": "test1",
+      "sheet_id": "test1"
+    }
+  }
+}

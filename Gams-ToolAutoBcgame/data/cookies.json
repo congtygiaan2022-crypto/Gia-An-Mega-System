@@ -1,0 +1,239 @@
+[
+  {
+    "domain": "bcvn2.com",
+    "expiry": 1813321367,
+    "httpOnly": false,
+    "name": "__rtg_vid",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "99fbe515-01ec-48f0-927b-34c2e5b03498"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1778763160,
+    "httpOnly": true,
+    "name": "__cf_bm",
+    "path": "/",
+    "sameSite": "None",
+    "secure": true,
+    "value": "8CyV3_4OB8OZqx4dmrpHmmihUp5HfhdpB1QVC5egj4Q-1778761359.7919939-1.0.1.1-thc_rRAEipg0th0ESaTbfRJqnt4qpLkVoS0ibJrEsrx_q4DC6aM.vV00TBBhw21xmVskJH_Cn5XOO_QoOjrC_gJ0ZVoV.1DB2mV_wowcx3obXkTrp_OrtpoXXYx9njIH"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1786537366,
+    "httpOnly": false,
+    "name": "_fbp",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "fb.1.1778761366825.62152384645296914"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "httpOnly": false,
+    "name": "slfps",
+    "path": "/",
+    "sameSite": "None",
+    "secure": true,
+    "value": "a61a07529a69e235fcbabaf860a89f6de3fc1efb855aa20722a11495387d9218"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1813321364,
+    "httpOnly": false,
+    "name": "_ga",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "GA1.1.1444745800.1778759957"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1813319955,
+    "httpOnly": true,
+    "name": "SESSION",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "01ffxnvltkhfwt19e265af02e3c11fbd3083d69100c363c33a"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1813321364,
+    "httpOnly": false,
+    "name": "_ga_B23BPN2TGE",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "GS2.1.s1778759959$o1$g1$t1778761364$j60$l0$h1817689884"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1779366162,
+    "httpOnly": false,
+    "name": "intercom-session-t87ss9s4",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "MWl5OE12TGYweHdOQWlRMVVWTjJkQnk4SXg1Wk5uUVF3SjdFQzRsTWgzWUQ2cmZ0YWM3blRZZHdZY3ZjbWNUQy9aRC9ESUZ2ZnRweDlES2xicUhzM3o0RExxSEVwQXVVSUpGWS9xc3JFZ1NEQ3VKWVp6VDI1dEo2TFkwdkhtRk84Z2VUK0h3aWQyb3JLSE92VVo5NkVIZjBGRXhKb0JTMjBLTW1vd3lhS0RFMk94bm1MMjhabHIxWGxvZThVOGFQQzBLbXNWU2VKWFRWTkl4K1NXaTg5Zz09LS1RUSt4VVFYTlNjaXl6c0Z5bjBmK0tRPT0=--37d28ce7ccf26ff52ea185599486c8864b119f07"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1778845967,
+    "httpOnly": false,
+    "name": "_dads",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "jig"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "httpOnly": true,
+    "name": "visit-url",
+    "path": "/",
+    "sameSite": "None",
+    "secure": true,
+    "value": "https%3A%2F%2Fbcvn2.com%2Fvi%2F"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1813321364,
+    "httpOnly": false,
+    "name": "_ga_7Q8ZMQJCT2",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "GS2.1.s1778759957$o1$g1$t1778761364$j58$l0$h0"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1810297360,
+    "httpOnly": true,
+    "name": "cf_clearance",
+    "path": "/",
+    "sameSite": "None",
+    "secure": true,
+    "value": "oIpKBNU_9S0ZhGQHCg8mcbUH3yPdgZs6rmWh04sQEPY-1778761359-1.2.1.1-TsA0w6g7BqgU3D9GslhRiu5dI_cqt15mrFZfnaFGliVoo.JY.B74QRLpu0ZFktf7lrhntA3iqXRf.no5B1QrYyEo1KuYSqsdBCdluXDMJoV2uE_PmcE4SOqvkpko9TxBeSp2ZycqyOOQR5qODsA4LYUBzceyMXqWDsYUIvoME_YODH8N1QObnHsDvmTy2nYnFjQ0164vp1gr1DwDRB1osxj007E17f.uCsZzXDGt6EHRWKa0sEgv7oPkdD4op9Zzq2oEW6axHf_w_u.0WjCRW7Me.WlD06trliusKJ5TzX1eLv0LVIgmmzsNDxfUN46kPkWdResAbsHdLLStJzCOiA"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1813321360,
+    "httpOnly": false,
+    "name": "sensorsdata2015jssdkcross",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "%7B%22distinct_id%22%3A%2266022712%22%2C%22first_id%22%3A%2219e265af53e15e-0a8a069a177538-26001b51-1327104-19e265af53f910%22%2C%22props%22%3A%7B%22%24latest_traffic_source_type%22%3A%22%E7%9B%B4%E6%8E%A5%E6%B5%81%E9%87%8F%22%2C%22%24latest_search_keyword%22%3A%22%E6%9C%AA%E5%8F%96%E5%88%B0%E5%80%BC_%E7%9B%B4%E6%8E%A5%E6%89%93%E5%BC%80%22%2C%22%24latest_referrer%22%3A%22%22%7D%2C%22identities%22%3A%22eyIkaWRlbnRpdHlfY29va2llX2lkIjoiMTllMjY1YWY1M2UxNWUtMGE4YTA2OWExNzc1MzgtMjYwMDFiNTEtMTMyNzEwNC0xOWUyNjVhZjUzZjkxMCIsIiRpZGVudGl0eV9sb2dpbl9pZCI6IjY2MDIyNzEyIn0%3D%22%2C%22history_login_id%22%3A%7B%22name%22%3A%22%24identity_login_id%22%2C%22value%22%3A%2266022712%22%7D%2C%22%24device_id%22%3A%2219e265af53e15e-0a8a069a177538-26001b51-1327104-19e265af53f910%22%7D"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1810295960,
+    "httpOnly": false,
+    "name": "blueID",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "959c8992-43c2-410a-8af4-350494a663ec"
+  },
+  {
+    "domain": "bcvn2.com",
+    "expiry": 1810295959,
+    "httpOnly": false,
+    "name": "rtgio_tid",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "v1.0.19886954648.15451995118"
+  },
+  {
+    "domain": "bcvn2.com",
+    "expiry": 1813321361,
+    "httpOnly": false,
+    "name": ".thumbcache_1f3830c3848041ef5612f684078f2210",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "DpgDkvglH2KpZgiZrMRDA8nMJvesvUMX6uoB5RWtP4K3vqKCgJzZA+VvV9i9+EHcaDOry6KMr+zgT3l74ooxnA%3D%3D"
+  },
+  {
+    "domain": "bcvn2.com",
+    "expiry": 1813319955,
+    "httpOnly": false,
+    "name": "smidV2",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "202605141859157c8350afc8349443fb92ee008fd8cbf800825784fd5c2ff50"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1810297362,
+    "httpOnly": false,
+    "name": "_hjSessionUser_3056635",
+    "path": "/",
+    "sameSite": "None",
+    "secure": true,
+    "value": "eyJpZCI6IjdiMjdiNWZiLWIzMGMtNWZhZS1iNGI4LTlkZDM3Y2NjYzZlYiIsImNyZWF0ZWQiOjE3Nzg3NTk5NTc4NjAsImV4aXN0aW5nIjp0cnVlfQ=="
+  },
+  {
+    "domain": ".bcvn2.com",
+    "httpOnly": true,
+    "name": "dc",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": true,
+    "value": "jp"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1786535959,
+    "httpOnly": false,
+    "name": "_gcl_au",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "1.1.89726619.1778759959"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1802091362,
+    "httpOnly": false,
+    "name": "intercom-device-id-t87ss9s4",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "ab0b8833-950d-40fd-af16-ddb83643d378"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1802089984,
+    "httpOnly": false,
+    "name": "intercom-id-t87ss9s4",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "44f7f723-2ddf-4f5b-8c76-e51f90b3b5f3"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1778777999,
+    "httpOnly": false,
+    "name": "sajssdk_2015_cross_new_user",
+    "path": "/",
+    "sameSite": "Lax",
+    "secure": false,
+    "value": "1"
+  },
+  {
+    "domain": ".bcvn2.com",
+    "expiry": 1778761815,
+    "httpOnly": false,
+    "name": "_hjSession_3056635",
+    "path": "/",
+    "sameSite": "None",
+    "secure": true,
+    "value": "eyJpZCI6ImMzZWViZjg2LWIwODktNDIwZi1iZjJiLTFiZTYwMTFjNDBhNyIsImMiOjE3Nzg3NTk5NTc4NjIsInMiOjAsInIiOjAsInNiIjowLCJzciI6MCwic2UiOjAsImZzIjoxLCJzcCI6MH0="
+  }
+]

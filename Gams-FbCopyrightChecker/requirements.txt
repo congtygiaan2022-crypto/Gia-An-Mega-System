@@ -1,0 +1,17 @@
+selenium==4.20.0
+webdriver-manager==4.0.1
+colorlog==6.8.2
+python-dotenv==1.0.1
+pyotp==2.9.0
+customtkinter==5.2.2
+pillow==10.3.0
+requests>=2.31
+psutil>=5.9
+
+# AI Agent — Tầng 2 (Claude classifier)
+anthropic>=0.40
+
+# API Server — Tầng 5
+fastapi>=0.115
+uvicorn[standard]>=0.30
+websockets>=12.0

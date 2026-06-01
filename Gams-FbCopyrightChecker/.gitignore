@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+chromedriver.exe
+db/
+logs/
+chrome_profile/
+.env
+cd_out.txt
+cd_err.txt
+report.txt
+backup_code/
+.claude/
+venv/
+.venv/

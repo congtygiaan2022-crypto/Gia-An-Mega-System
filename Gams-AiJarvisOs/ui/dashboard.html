@@ -1,0 +1,36 @@
+<html>
+<head>
+<title>Javis Control Panel</title>
+</head>
+
+<body>
+
+<h2>Javis AI Agent</h2>
+
+<input id="task" placeholder="Enter task" style="width:400px">
+
+<button onclick="run()">Run</button>
+
+<pre id="output"></pre>
+
+<script>
+
+async function run(){
+
+let task = document.getElementById("task").value
+
+let res = await fetch("/run?task=" + encodeURIComponent(task),{
+method:"POST"
+})
+
+let data = await res.json()
+
+document.getElementById("output").innerText =
+JSON.stringify(data,null,2)
+
+}
+
+</script>
+
+</body>
+</html>

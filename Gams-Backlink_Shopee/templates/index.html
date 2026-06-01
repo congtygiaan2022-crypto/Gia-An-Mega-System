@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="vi" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopee Backlink Tool — Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0f172a',
+                            card: '#1e293b',
+                            primary: '#0ea5e9',
+                            success: '#10b981',
+                            warning: '#f59e0b',
+                            danger: '#ef4444'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for log window */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-brand-dark text-slate-100 min-h-screen flex flex-col font-sans">
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-sky-500 rounded-xl flex items-center justify-center shadow-lg shadow-sky-500/20 text-white font-bold text-lg">S</div>
+                <div>
+                    <h1 class="text-lg font-bold tracking-tight bg-gradient-to-r from-sky-400 to-emerald-400 bg-clip-text text-transparent">SHOPEE BACKLINK SCRAPER</h1>
+                    <p class="text-xs text-slate-400">Hybrid Engine v2.1</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="status-badge" class="px-3 py-1 text-xs font-semibold rounded-full bg-slate-800 text-slate-400 flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
+                    Đang tải...
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="flex-1 max-w-7xl mx-auto px-4 py-8 w-full grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left: Control Panel -->
+        <div class="lg:col-span-1 flex flex-col gap-6">
+            <div class="glass rounded-2xl p-6 flex flex-col gap-5">
+                <h2 class="text-base font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-2">Bảng điều khiển</h2>
+                
+                <!-- Browser Action Box -->
+                <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-800/80">
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Đăng nhập tài khoản</h3>
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">Mở trình duyệt thực để đăng nhập Shopee trước khi bắt đầu quét để tránh các lỗi bị Shopee chặn hoặc yêu cầu xác minh.</p>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="btn-open-browser" class="w-full bg-amber-600 hover:bg-amber-500 text-white py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5 shadow-lg shadow-amber-600/10">
+                            Mở Chrome
+                        </button>
+                        <button id="btn-close-browser" class="w-full bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 py-2 px-3 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5" disabled>
+                            Lưu Đăng Nhập
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scraper Action Box -->
+                <div class="p-4 bg-slate-900/50 rounded-xl border border-slate-800/80">
+                    <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Tiến trình cào link</h3>
+                    <p class="text-xs text-slate-400 mb-4 leading-relaxed">Bắt đầu tiến trình tự động resolve link và lấy tên sản phẩm shopee từ danh sách.</p>
+                    <div class="flex flex-col gap-3">
+                        <button id="btn-start-scraper" class="w-full bg-sky-500 hover:bg-sky-400 text-white py-2.5 px-4 rounded-lg font-bold transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-sky-500/20">
+                            Bắt Đầu Quét
+                        </button>
+                        <button id="btn-stop-scraper" class="w-full bg-brand-danger/20 hover:bg-brand-danger/30 text-brand-danger border border-brand-danger/30 py-2 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center gap-1.5" disabled>
+                            Dừng Quét
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cài đặt Cấu hình Card -->
+            <div class="glass rounded-2xl p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-1">
+                    <h2 class="text-base font-bold text-slate-200 uppercase tracking-wider">Cài đặt Cấu hình</h2>
+                    <span class="text-[10px] bg-sky-950 text-sky-400 border border-sky-800/50 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Config</span>
+                </div>
+                <div class="flex flex-col gap-4 text-sm">
+                    
+                    <!-- Chế độ chạy -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Chế độ vận hành</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-mode-stable" type="button" class="border border-sky-500/30 bg-sky-950/20 text-sky-400 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 shadow-md shadow-sky-500/5">
+                                <span class="text-sm">🛡️ Ổn định (1 Luồng)</span>
+                                <span class="text-[9px] font-normal text-slate-400 text-center">Dùng nick chính cố định</span>
+                            </button>
+                            <button id="btn-mode-fast" type="button" class="border border-slate-800 bg-slate-900/40 text-slate-400 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1">
+                                <span class="text-sm">⚡ Tốc độ (Đa Luồng)</span>
+                                <span class="text-[9px] font-normal text-slate-400 text-center">Tự động đồng bộ nick</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Threads input with +/- buttons -->
+                    <div class="flex flex-col gap-1.5" id="threads-container">
+                        <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Số luồng Chrome chạy song song</label>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-threads-minus" type="button" class="w-10 h-9 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-lg border border-slate-800 transition-colors flex items-center justify-center text-lg">-</button>
+                            <input type="number" id="input-threads" min="1" max="10" value="1" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg h-9 text-center text-slate-200 font-extrabold text-sm focus:outline-none focus:border-sky-500" readonly>
+                            <button id="btn-threads-plus" type="button" class="w-10 h-9 bg-slate-900 hover:bg-slate-800 text-slate-300 font-bold rounded-lg border border-slate-800 transition-colors flex items-center justify-center text-lg">+</button>
+                        </div>
+                        <!-- Nút chọn nhanh -->
+                        <div class="flex flex-wrap gap-1.5 mt-1">
+                            <button type="button" class="btn-fast-thread px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800/80 rounded text-xs transition-colors" data-val="1">1 luồng</button>
+                            <button type="button" class="btn-fast-thread px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800/80 rounded text-xs transition-colors" data-val="2">2 luồng</button>
+                            <button type="button" class="btn-fast-thread px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800/80 rounded text-xs transition-colors" data-val="3">3 luồng</button>
+                            <button type="button" class="btn-fast-thread px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800/80 rounded text-xs transition-colors" data-val="5">5 luồng</button>
+                        </div>
+                        <span id="threads-tip" class="text-[10px] text-amber-500 leading-relaxed mt-1 flex gap-1 items-start">
+                            <span>💡</span>
+                            <span>Ở chế độ 1 luồng, Chrome sẽ chạy trực tiếp trên profile chính để sử dụng nick Shopee đã đăng nhập cố định của bạn.</span>
+                        </span>
+                    </div>
+                    
+                    <!-- Chrome Only toggle -->
+                    <div class="flex items-center justify-between py-2 border-t border-b border-slate-800/40">
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-slate-300">Quét bằng Chrome trực tiếp</span>
+                            <span class="text-[10px] text-slate-500">Bỏ qua requests để tránh bị chặn bot</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="input-chrome-only" class="sr-only peer" checked>
+                            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500 peer-checked:after:bg-white"></div>
+                        </label>
+                    </div>
+
+                    <!-- Headless toggle -->
+                    <div class="flex items-center justify-between py-1 border-b border-slate-800/40">
+                        <div class="flex flex-col">
+                            <span class="font-semibold text-slate-300">Chạy ẩn danh (Headless)</span>
+                            <span class="text-[10px] text-slate-500">Ẩn cửa sổ Chrome khi quét</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="input-headless" class="sr-only peer">
+                            <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-sky-500 peer-checked:after:bg-white"></div>
+                        </label>
+                    </div>
+
+                    <!-- Save config button -->
+                    <button id="btn-save-config" class="w-full bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 active:scale-[0.98] text-white py-2.5 px-4 rounded-xl text-sm font-bold transition-all duration-150 flex items-center justify-center gap-2 shadow-lg shadow-sky-600/10">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                        Lưu Cài Đặt Cấu Hình
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary File Info -->
+            <div class="glass rounded-2xl p-6">
+                <h2 class="text-base font-bold text-slate-200 uppercase tracking-wider border-b border-slate-800 pb-2 mb-4">Thông tin File</h2>
+                <div class="flex flex-col gap-3 text-sm">
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-800/40">
+                        <span class="text-slate-400">File link Shopee</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-slate-200">Link_shopee.txt</span>
+                            <button id="btn-open-input" class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs transition-colors flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                Mở
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-800/40">
+                        <span class="text-slate-400">File kết quả</span>
+                        <div class="flex items-center gap-2">
+                            <span class="font-semibold text-emerald-400">ket_qua.txt</span>
+                            <button id="btn-open-output" class="px-2 py-0.5 bg-emerald-950 hover:bg-emerald-900/40 text-emerald-400 border border-emerald-800/50 rounded text-xs transition-colors flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                Mở
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5">
+                        <span class="text-slate-400">Trình duyệt giả lập</span>
+                        <span class="font-semibold text-sky-400">Chrome (Fixed Profile)</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Progress, Metrics and Log Terminal -->
+        <div class="lg:col-span-2 flex flex-col gap-6">
+            
+            <!-- Metrics Panel -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="glass rounded-xl p-4 flex flex-col justify-center">
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Tổng link</span>
+                    <span id="metric-total" class="text-2xl font-bold text-slate-100 mt-1">0</span>
+                </div>
+                <div class="glass rounded-xl p-4 flex flex-col justify-center border-l-2 border-emerald-500">
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Thành công</span>
+                    <span id="metric-success" class="text-2xl font-bold text-emerald-400 mt-1">0</span>
+                </div>
+                <div class="glass rounded-xl p-4 flex flex-col justify-center border-l-2 border-rose-500">
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Thất bại</span>
+                    <span id="metric-failed" class="text-2xl font-bold text-rose-400 mt-1">0</span>
+                </div>
+                <div class="glass rounded-xl p-4 flex flex-col justify-center border-l-2 border-amber-500">
+                    <span class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Đã có trước</span>
+                    <span id="metric-skipped" class="text-2xl font-bold text-amber-400 mt-1">0</span>
+                </div>
+            </div>
+
+            <!-- Progress Bar Card -->
+            <div class="glass rounded-2xl p-6 flex flex-col gap-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-base font-bold text-slate-200">Tiến độ chạy thực tế</h2>
+                        <p id="progress-desc" class="text-xs text-slate-400 mt-0.5">Tiến trình chưa bắt đầu</p>
+                    </div>
+                    <span id="progress-percent" class="text-2xl font-extrabold text-sky-400">0%</span>
+                </div>
+                <div class="w-full bg-slate-900 rounded-full h-3.5 p-0.5 overflow-hidden border border-slate-800">
+                    <div id="progress-bar" class="bg-gradient-to-r from-sky-500 to-emerald-400 h-2 rounded-full transition-all duration-300 w-0"></div>
+                </div>
+            </div>
+
+            <!-- Real-time Terminal Log Console -->
+            <div class="glass rounded-2xl p-6 flex-1 flex flex-col min-h-[350px]">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-3 mb-4">
+                    <h2 class="text-base font-bold text-slate-200 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse"></span>
+                        Nhật ký chạy ngầm (Live Logs)
+                    </h2>
+                    <div class="flex items-center gap-3">
+                        <button id="btn-copy-logs" class="text-xs text-sky-400 hover:text-sky-300 transition-colors font-semibold">
+                            Sao chép nhật ký
+                        </button>
+                        <span class="text-slate-700">|</span>
+                        <button id="btn-clear-logs" class="text-xs text-slate-400 hover:text-slate-200 transition-colors">
+                            Xóa màn hình
+                        </button>
+                    </div>
+                </div>
+                <div id="terminal" class="bg-slate-950/80 rounded-xl p-4 border border-slate-900 font-mono text-xs leading-relaxed overflow-y-auto flex-1 max-h-[400px]">
+                    <div class="text-slate-500">// Hệ thống sẵn sàng. Bấm nút Khởi chạy quét để bắt đầu.</div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        Shopee Backlink Tool — Build with Antigravity AI
+    </footer>
+
+    <!-- JavaScript & API Interactions -->
+    <script>
+        const statusBadge = document.getElementById('status-badge');
+        const metricTotal = document.getElementById('metric-total');
+        const metricSuccess = document.getElementById('metric-success');
+        const metricFailed = document.getElementById('metric-failed');
+        const metricSkipped = document.getElementById('metric-skipped');
+        const progressDesc = document.getElementById('progress-desc');
+        const progressPercent = document.getElementById('progress-percent');
+        const progressBar = document.getElementById('progress-bar');
+        const terminal = document.getElementById('terminal');
+        
+        const btnOpenBrowser = document.getElementById('btn-open-browser');
+        const btnCloseBrowser = document.getElementById('btn-close-browser');
+        const btnStartScraper = document.getElementById('btn-start-scraper');
+        const btnStopScraper = document.getElementById('btn-stop-scraper');
+        const btnClearLogs = document.getElementById('btn-clear-logs');
+
+        let logEventSource = null;
+
+        // Clear terminal screen
+        btnClearLogs.addEventListener('click', () => {
+            terminal.innerHTML = '<div class="text-slate-500">// Đã xóa nhật ký.</div>';
+        });
+
+        // Add log message to terminal
+        function logToTerminal(msg, type = "INFO") {
+            const div = document.createElement('div');
+            let colorClass = "text-slate-300";
+            if (type === "SUCCESS") colorClass = "text-emerald-400 font-semibold";
+            else if (type === "ERROR") colorClass = "text-rose-400 font-semibold";
+            else if (type === "WARN") colorClass = "text-amber-400";
+            
+            div.className = colorClass;
+            div.textContent = msg;
+            terminal.appendChild(div);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        // Fetch current status and update UI
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                // Update metrics
+                metricTotal.textContent = data.stats.total.toLocaleString();
+                metricSuccess.textContent = data.stats.success.toLocaleString();
+                metricFailed.textContent = data.stats.failed.toLocaleString();
+                metricSkipped.textContent = data.stats.skipped.toLocaleString();
+
+                // Update progress using phase1 and phase2 metrics for real-time tracking
+                const p1_total = data.stats.phase1_total || 0;
+                const p1_done = data.stats.phase1_done || 0;
+                const p2_total = data.stats.phase2_total || 0;
+                const p2_done = data.stats.phase2_done || 0;
+                
+                let percent = 0;
+                // If Phase 1 was skipped or completed with zero FAST resolutions (all links went to Chrome)
+                if (p1_total === p1_done && p2_total === p1_total) {
+                    // Progress is purely Phase 2 progress
+                    if (p2_total > 0) {
+                        percent = Math.min(Math.round((p2_done / p2_total) * 100), 100);
+                    }
+                } else {
+                    // Normal hybrid engine progress (Phase 1 + Phase 2)
+                    const totalOperations = p1_total + p2_total;
+                    const completedOperations = p1_done + p2_done;
+                    if (totalOperations > 0) {
+                        percent = Math.min(Math.round((completedOperations / totalOperations) * 100), 100);
+                    }
+                }
+                
+                if (data.stats.total > 0 && data.stats.skipped === data.stats.total) {
+                    percent = 100;
+                }
+
+                progressPercent.textContent = percent + '%';
+                progressBar.style.width = percent + '%';
+
+                const processed = data.stats.success + data.stats.failed;
+                const totalNeedToProcess = data.stats.total - data.stats.skipped;
+
+                if (data.status === "RUNNING") {
+                    if (p2_total > 0 && p1_done >= p1_total) {
+                        // Check if Phase 1 was skipped
+                        if (p1_total === p1_done && p2_total === p1_total) {
+                            progressDesc.textContent = `Đang quét bằng Chrome giả lập: Đã xử lý ${p2_done}/${p2_total} link (${percent}%)`;
+                        } else {
+                            progressDesc.textContent = `Phase 2 (Chrome giả lập): Đang quét ${p2_done}/${p2_total} link (Tổng cộng: ${percent}%)`;
+                        }
+                    } else if (p1_total > 0 && p1_done < p1_total) {
+                        progressDesc.textContent = `Phase 1 (Requests): Đang phân tích ${p1_done}/${p1_total} link (Tổng cộng: ${percent}%)`;
+                    } else {
+                        progressDesc.textContent = `Đang xử lý: ${processed}/${totalNeedToProcess} link (${percent}%)`;
+                    }
+                } else if (data.status === "IDLE") {
+                    progressDesc.textContent = percent === 100 ? "Đã hoàn thành tất cả danh sách!" : "Tiến trình đang tạm dừng/sẵn sàng";
+                } else if (data.status === "BROWSER_OPEN") {
+                    progressDesc.textContent = "Đang mở trình duyệt đăng nhập thủ công";
+                }
+
+                // Update status badge
+                updateStatusBadge(data.status);
+
+                // Update buttons state
+                btnOpenBrowser.disabled = (data.status !== "IDLE");
+                btnCloseBrowser.disabled = (data.status !== "BROWSER_OPEN");
+                btnStartScraper.disabled = (data.status !== "IDLE");
+                btnStopScraper.disabled = (data.status !== "RUNNING");
+
+            } catch (err) {
+                console.error("Lỗi lấy trạng thái:", err);
+            }
+        }
+
+        function updateStatusBadge(status) {
+            let label = "Chưa kết nối";
+            let color = "bg-slate-800 text-slate-400";
+            let dotColor = "bg-slate-500";
+
+            if (status === "IDLE") {
+                label = "Sẵn sàng";
+                color = "bg-slate-800 text-slate-300";
+                dotColor = "bg-sky-500";
+            } else if (status === "RUNNING") {
+                label = "Đang quét...";
+                color = "bg-emerald-950/40 text-emerald-400 border border-emerald-800/30";
+                dotColor = "bg-emerald-500";
+            } else if (status === "BROWSER_OPEN") {
+                label = "Trình duyệt mở";
+                color = "bg-amber-950/40 text-amber-400 border border-amber-800/30";
+                dotColor = "bg-amber-500";
+            }
+
+            statusBadge.className = `px-3 py-1 text-xs font-semibold rounded-full flex items-center gap-2 ${color}`;
+            statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full ${dotColor} ${status === 'RUNNING' ? 'animate-ping' : 'animate-pulse'}"></span>${label}`;
+        }
+
+        // Setup EventSource for streaming logs
+        function connectLogs() {
+            if (logEventSource) {
+                logEventSource.close();
+            }
+            logEventSource = new EventSource('/api/logs');
+            logEventSource.onmessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    logToTerminal(data.msg, data.type);
+                } catch (e) {
+                    console.error("Lỗi parse stream log:", e);
+                }
+            };
+            logEventSource.onerror = function() {
+                console.log("Mất kết nối log stream, đang thử lại...");
+            };
+        }
+
+        // Button Actions
+        btnOpenBrowser.addEventListener('click', async () => {
+            try {
+                logToTerminal("Đang khởi chạy Chrome đăng nhập Shopee...", "INFO");
+                const res = await fetch('/api/open-browser', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === "success") {
+                    logToTerminal("Trình duyệt Chrome đã mở. Vui lòng thực hiện đăng nhập trên cửa sổ trình duyệt.", "WARN");
+                } else {
+                    logToTerminal("Lỗi mở trình duyệt: " + data.message, "ERROR");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API mở trình duyệt.", "ERROR");
+            }
+        });
+
+        btnCloseBrowser.addEventListener('click', async () => {
+            try {
+                logToTerminal("Đang lưu trạng thái đăng nhập và đóng Chrome...", "INFO");
+                const res = await fetch('/api/save-login', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === "success") {
+                    logToTerminal("Đã đóng trình duyệt và xuất Cookies thành công!", "SUCCESS");
+                } else {
+                    logToTerminal("Lỗi đóng trình duyệt: " + data.message, "ERROR");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API lưu đăng nhập.", "ERROR");
+            }
+        });
+
+        btnStartScraper.addEventListener('click', async () => {
+            try {
+                logToTerminal("Đang kích hoạt tiến trình quét link Shopee...", "INFO");
+                const res = await fetch('/api/start', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === "success") {
+                    logToTerminal("Tiến trình quét đang chạy ngầm...", "SUCCESS");
+                } else {
+                    logToTerminal("Khởi động quét thất bại: " + data.message, "ERROR");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API khởi động quét.", "ERROR");
+            }
+        });
+
+        btnStopScraper.addEventListener('click', async () => {
+            try {
+                logToTerminal("Đang yêu cầu dừng tiến trình...", "WARN");
+                const res = await fetch('/api/stop', { method: 'POST' });
+                const data = await res.json();
+                if (data.status === "success") {
+                    logToTerminal("Đã gửi yêu cầu dừng quét thành công.", "SUCCESS");
+                } else {
+                    logToTerminal("Yêu cầu dừng thất bại: " + data.message, "ERROR");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API dừng quét.", "ERROR");
+            }
+        });
+
+        // Open file buttons
+        const btnOpenInput = document.getElementById('btn-open-input');
+        const btnOpenOutput = document.getElementById('btn-open-output');
+
+        btnOpenInput.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/open-input', { method: 'POST' });
+                const data = await res.json();
+                if (data.status !== "success") {
+                    logToTerminal("Lỗi mở file: " + data.message, "ERROR");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API mở file.", "ERROR");
+            }
+        });
+
+        btnOpenOutput.addEventListener('click', async () => {
+            try {
+                const res = await fetch('/api/open-output', { method: 'POST' });
+                const data = await res.json();
+                if (data.status !== "success") {
+                    logToTerminal("Lỗi mở file: " + data.message, "ERROR");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API mở file.", "ERROR");
+            }
+        });
+
+        // Toast Notification System
+        function showToast(message, type = "success") {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = "bg-emerald-900/95 text-emerald-50 border border-emerald-700/40";
+            let icon = `<svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            
+            if (type === "error") {
+                bgClass = "bg-rose-900/95 text-rose-50 border border-rose-700/40";
+                icon = `<svg class="w-4 h-4 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+            } else if (type === "warning") {
+                bgClass = "bg-amber-900/95 text-amber-50 border border-amber-700/40";
+                icon = `<svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+            }
+            
+            toast.className = `flex items-center gap-3 px-4 py-3 rounded-xl shadow-2xl backdrop-blur-md transition-all duration-300 transform translate-x-20 opacity-0 pointer-events-auto max-w-sm ${bgClass}`;
+            toast.innerHTML = `
+                ${icon}
+                <span class="text-xs font-bold flex-1">${message}</span>
+                <button class="text-slate-400 hover:text-slate-200 transition-colors" onclick="this.parentElement.remove()">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => {
+                toast.classList.remove('translate-x-20', 'opacity-0');
+                toast.classList.add('translate-x-0', 'opacity-100');
+            }, 10);
+            
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-x-0', 'opacity-100');
+                toast.classList.add('translate-x-20', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 4000);
+        }
+
+        // Config Settings Logic
+        const inputThreads = document.getElementById('input-threads');
+        const inputChromeOnly = document.getElementById('input-chrome-only');
+        const inputHeadless = document.getElementById('input-headless');
+        const btnSaveConfig = document.getElementById('btn-save-config');
+        
+        const btnModeStable = document.getElementById('btn-mode-stable');
+        const btnModeFast = document.getElementById('btn-mode-fast');
+        const btnThreadsMinus = document.getElementById('btn-threads-minus');
+        const btnThreadsPlus = document.getElementById('btn-threads-plus');
+        const threadsTip = document.getElementById('threads-tip');
+
+        // Hàm cập nhật trạng thái UI tương ứng với số luồng
+        function updateUIForThreads(threads) {
+            inputThreads.value = threads;
+            if (threads === 1) {
+                // Chế độ ổn định
+                btnModeStable.className = "border border-sky-500 bg-sky-950/40 text-sky-400 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 shadow-md shadow-sky-500/10";
+                btnModeFast.className = "border border-slate-800 bg-slate-900/40 text-slate-500 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 cursor-pointer";
+                
+                // Disable các nút điều khiển luồng
+                btnThreadsMinus.disabled = true;
+                btnThreadsPlus.disabled = true;
+                btnThreadsMinus.classList.add('opacity-40', 'cursor-not-allowed');
+                btnThreadsPlus.classList.add('opacity-40', 'cursor-not-allowed');
+                
+                document.querySelectorAll('.btn-fast-thread').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-40', 'cursor-not-allowed');
+                });
+                
+                threadsTip.innerHTML = `<span>💡</span><span>Chế độ 1 luồng: Chrome chạy trực tiếp trên profile chính (shopee_profile). Đây là chế độ <b>an toàn nhất</b>, giúp kế thừa 100% tài khoản đã đăng nhập.</span>`;
+                threadsTip.className = "text-[10px] text-sky-400 leading-relaxed mt-1 flex gap-1 items-start bg-sky-950/20 border border-sky-900/30 p-2 rounded-lg";
+            } else {
+                // Chế độ tốc độ (Đa luồng)
+                btnModeStable.className = "border border-slate-800 bg-slate-900/40 text-slate-500 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 cursor-pointer";
+                btnModeFast.className = "border border-amber-500 bg-amber-950/40 text-amber-400 py-2 px-3 rounded-lg text-xs font-bold transition-all duration-200 flex flex-col items-center gap-1 shadow-md shadow-amber-500/10";
+                
+                // Enable các nút điều khiển luồng
+                btnThreadsMinus.disabled = false;
+                btnThreadsPlus.disabled = false;
+                btnThreadsMinus.classList.remove('opacity-40', 'cursor-not-allowed');
+                btnThreadsPlus.classList.remove('opacity-40', 'cursor-not-allowed');
+                
+                document.querySelectorAll('.btn-fast-thread').forEach(btn => {
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-40', 'cursor-not-allowed');
+                });
+                
+                threadsTip.innerHTML = `<span>⚡</span><span>Chế độ đa luồng: Chạy song song <b>${threads} luồng Chrome</b>. Hệ thống tự động đồng bộ Cookies, Local Storage và IndexedDB đăng nhập từ profile chính sang các luồng phụ.</span>`;
+                threadsTip.className = "text-[10px] text-amber-500 leading-relaxed mt-1 flex gap-1 items-start bg-amber-950/10 border border-amber-900/20 p-2 rounded-lg";
+            }
+        }
+
+        // Chọn chế độ ổn định (1 luồng)
+        btnModeStable.addEventListener('click', () => {
+            updateUIForThreads(1);
+        });
+
+        // Chọn chế độ đa luồng
+        btnModeFast.addEventListener('click', () => {
+            let threads = parseInt(inputThreads.value) || 3;
+            if (threads <= 1) threads = 3;
+            updateUIForThreads(threads);
+        });
+
+        // Nút trừ luồng
+        btnThreadsMinus.addEventListener('click', () => {
+            let threads = parseInt(inputThreads.value) || 3;
+            if (threads > 2) {
+                threads--;
+                updateUIForThreads(threads);
+            } else if (threads === 2) {
+                updateUIForThreads(1);
+            }
+        });
+
+        // Nút cộng luồng
+        btnThreadsPlus.addEventListener('click', () => {
+            let threads = parseInt(inputThreads.value) || 1;
+            if (threads < 10) {
+                threads++;
+                updateUIForThreads(threads);
+            }
+        });
+
+        // Click nút chọn nhanh luồng
+        document.querySelectorAll('.btn-fast-thread').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = parseInt(btn.getAttribute('data-val'));
+                updateUIForThreads(val);
+            });
+        });
+
+        async function fetchSettings() {
+            try {
+                const res = await fetch('/api/settings');
+                const data = await res.json();
+                if (data.status === "success") {
+                    const threads = data.config.NUM_THREADS || 1;
+                    updateUIForThreads(threads);
+                    inputChromeOnly.checked = data.config.USE_CHROME_ONLY;
+                    inputHeadless.checked = data.config.HEADLESS;
+                }
+            } catch (e) {
+                console.error("Lỗi tải cài đặt:", e);
+            }
+        }
+
+        btnSaveConfig.addEventListener('click', async () => {
+            try {
+                const threads = parseInt(inputThreads.value) || 1;
+                const config = {
+                    NUM_THREADS: threads,
+                    USE_CHROME_ONLY: inputChromeOnly.checked,
+                    HEADLESS: inputHeadless.checked
+                };
+                const res = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+                const data = await res.json();
+                if (data.status === "success") {
+                    logToTerminal(`Cập nhật cấu hình thành công: ${threads} Luồng.`, "SUCCESS");
+                    showToast(`Đã lưu cài đặt cấu hình thành công! (${threads} luồng)`, "success");
+                    fetchStatus();
+                } else {
+                    logToTerminal("Lỗi lưu cấu hình: " + data.message, "ERROR");
+                    showToast("Lưu cấu hình thất bại: " + data.message, "error");
+                }
+            } catch (e) {
+                logToTerminal("Lỗi kết nối API lưu cấu hình.", "ERROR");
+                showToast("Lỗi kết nối API lưu cấu hình.", "error");
+            }
+        });
+
+        // Copy log console to clipboard
+        const btnCopyLogs = document.getElementById('btn-copy-logs');
+        btnCopyLogs.addEventListener('click', () => {
+            const logLines = Array.from(terminal.children)
+                .map(el => el.textContent)
+                .join('\n');
+            
+            navigator.clipboard.writeText(logLines).then(() => {
+                const originalText = btnCopyLogs.textContent;
+                btnCopyLogs.textContent = "Đã sao chép! ✓";
+                btnCopyLogs.className = "text-xs text-emerald-400 transition-colors font-semibold";
+                setTimeout(() => {
+                    btnCopyLogs.textContent = originalText;
+                    btnCopyLogs.className = "text-xs text-sky-400 hover:text-sky-300 transition-colors font-semibold";
+                }, 2000);
+            }).catch(err => {
+                console.error("Lỗi sao chép:", err);
+            });
+        });
+
+        // Initialize connection
+        connectLogs();
+        fetchSettings();
+        fetchStatus();
+        setInterval(fetchStatus, 1500);
+
+    </script>
+</body>
+</html>
