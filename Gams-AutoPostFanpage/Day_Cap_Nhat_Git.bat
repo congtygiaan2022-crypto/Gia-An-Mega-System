@@ -7,7 +7,8 @@ echo   DANG TU DONG DAY CAP NHAT LEN GITHUB...
 echo ====================================================
 
 rem Kiem tra thu muc Git
-if not exist .git goto NO_GIT
+git rev-parse --is-inside-work-tree >nul 2>&1
+if %errorlevel% neq 0 goto NO_GIT
 
 rem Lay ngay gio hien tai
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
