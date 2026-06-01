@@ -2630,16 +2630,45 @@
                     let summaryData = "";
                     let periodStr = "-";
                     if (item.data && typeof item.data === 'object') {
-                        for (const [k, v] of Object.entries(item.data)) {
-                            if (k === 'Thời gian') {
-                                periodStr = v;
-                            } else if (k !== 'page_name') {
-                                summaryData += `<div style="margin-bottom:6px; display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:2px;">
-                                <span style="color:var(--text-dim); font-size:0.75rem">${k}:</span> 
-                                <span style="color:var(--text-main); font-weight:600">${v}</span>
-                            </div>`;
-                            }
+                        if (item.data['Thời gian']) {
+                            periodStr = item.data['Thời gian'];
                         }
+
+                        // Định nghĩa thứ tự hiển thị cố định theo yêu cầu của user:
+                        // 1. Lượt xem
+                        // 2. Lượt theo dõi
+                        // 3. Lượt tương tác
+                        // 4. Liên hệ (Liên hệ mới / Lượt xem trang / Liên hệ)
+                        const displayKeys = [];
+                        
+                        const viewVal = item.data['Lượt xem'] || item.data['Xem'] || "0";
+                        const followVal = item.data['Lượt theo dõi'] || item.data['Theo dõi'] || "0";
+                        const interactionVal = item.data['Lượt tương tác'] || item.data['Tương tác'] || "0";
+                        
+                        let contactLabel = "Liên hệ";
+                        let contactVal = "0";
+                        if (item.data['Liên hệ mới'] !== undefined) {
+                            contactLabel = "Liên hệ mới";
+                            contactVal = item.data['Liên hệ mới'];
+                        } else if (item.data['Lượt xem trang'] !== undefined) {
+                            contactLabel = "Lượt xem trang";
+                            contactVal = item.data['Lượt xem trang'];
+                        } else if (item.data['Liên hệ'] !== undefined) {
+                            contactLabel = "Liên hệ";
+                            contactVal = item.data['Liên hệ'];
+                        }
+                        
+                        displayKeys.push({ label: "Lượt xem", value: viewVal });
+                        displayKeys.push({ label: "Lượt theo dõi", value: followVal });
+                        displayKeys.push({ label: "Lượt tương tác", value: interactionVal });
+                        displayKeys.push({ label: contactLabel, value: contactVal });
+
+                        displayKeys.forEach(entry => {
+                            summaryData += `<div style="margin-bottom:6px; display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:2px;">
+                                <span style="color:var(--text-dim); font-size:0.75rem">${entry.label}:</span> 
+                                <span style="color:var(--text-main); font-weight:600">${entry.value}</span>
+                            </div>`;
+                        });
                     }
 
                     if (!summaryData) summaryData = `<span style="color:var(--text-dim); font-style:italic">Chưa có dữ liệu</span>`;

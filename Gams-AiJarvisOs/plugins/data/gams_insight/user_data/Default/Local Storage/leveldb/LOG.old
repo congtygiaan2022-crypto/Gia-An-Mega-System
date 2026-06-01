@@ -1,3 +1,5 @@
-2026/06/01-07:39:28.867 8040 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/MANIFEST-000001
-2026/06/01-07:39:28.877 8040 Recovering log #761
-2026/06/01-07:39:28.880 8040 Reusing old log E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/000761.log 
+2026/06/02-04:12:11.828 5e14 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/MANIFEST-000001
+2026/06/02-04:12:11.837 5e14 Recovering log #769
+2026/06/02-04:12:11.839 5e14 Level-0 table #771: started
+2026/06/02-04:12:11.845 5e14 Level-0 table #771: 48094 bytes OK
+2026/06/02-04:12:11.849 5e14 Delete type=0 #769

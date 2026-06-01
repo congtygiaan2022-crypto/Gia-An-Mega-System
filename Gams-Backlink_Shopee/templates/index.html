@@ -68,6 +68,10 @@
                     <span class="w-2 h-2 rounded-full bg-slate-500 animate-pulse"></span>
                     Đang tải...
                 </span>
+                <button id="btn-shutdown" class="px-3 py-1 text-xs font-semibold rounded-full bg-rose-950/40 text-rose-400 border border-rose-800/30 hover:bg-rose-900/40 transition-colors flex items-center gap-1.5" title="Tắt triệt để toàn bộ tiến trình chạy ngầm">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                    Tắt triệt để Tool
+                </button>
             </div>
         </div>
     </header>
@@ -302,6 +306,7 @@
         const btnStartScraper = document.getElementById('btn-start-scraper');
         const btnStopScraper = document.getElementById('btn-stop-scraper');
         const btnClearLogs = document.getElementById('btn-clear-logs');
+        const btnShutdown = document.getElementById('btn-shutdown');
 
         let logEventSource = null;
 
@@ -501,6 +506,36 @@
                 }
             } catch (e) {
                 logToTerminal("Lỗi kết nối API dừng quét.", "ERROR");
+            }
+        });
+
+        // Shutdown button action
+        btnShutdown.addEventListener('click', async () => {
+            if (confirm("Bạn có chắc chắn muốn TẮT TRIỆT ĐỂ tool chạy ngầm và đóng tất cả tiến trình liên quan không?")) {
+                try {
+                    logToTerminal("Đang gửi lệnh tắt hệ thống triệt để...", "WARN");
+                    showToast("Đang tắt hệ thống triệt để...", "warning");
+                    
+                    // Disable buttons immediately
+                    btnShutdown.disabled = true;
+                    btnStartScraper.disabled = true;
+                    btnStopScraper.disabled = true;
+                    btnOpenBrowser.disabled = true;
+                    
+                    const res = await fetch('/api/shutdown', { method: 'POST' });
+                    const data = await res.json();
+                    
+                    if (data.status === "success") {
+                        logToTerminal("Hệ thống đã tắt triệt để. Bảng CMD sẽ đóng ngay sau đây.", "SUCCESS");
+                        showToast("Hệ thống đã tắt thành công!", "success");
+                    } else {
+                        logToTerminal("Lỗi khi tắt hệ thống: " + data.message, "ERROR");
+                    }
+                } catch (e) {
+                    // Flask process exiting might cut the connection mid-response
+                    logToTerminal("Hệ thống đã tắt thành công và đang đóng các tiến trình con.", "SUCCESS");
+                    showToast("Hệ thống đã tắt thành công!", "success");
+                }
             }
         });
 

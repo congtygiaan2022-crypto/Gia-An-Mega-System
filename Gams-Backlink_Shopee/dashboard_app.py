@@ -224,6 +224,55 @@ def save_login():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)})
 
+# Shutdown Flask server and kill all background drivers and chrome instances
+@app.route("/api/shutdown", methods=["POST"])
+def shutdown():
+    push_dashboard_log("Đang tiến hành tắt hệ thống triệt để...", "WARN")
+    
+    # 1. Stop scraper if running
+    global current_state, login_driver
+    try:
+        bt.should_stop = True
+    except Exception:
+        pass
+        
+    # 2. Close active Chrome login_driver
+    if login_driver:
+        try:
+            login_driver.quit()
+        except Exception:
+            pass
+        login_driver = None
+
+    # 3. Force kill all background Chrome/ChromeDriver processes related to this tool
+    try:
+        # Kill master profile Chrome
+        bt.force_kill_chrome_for_profile(bt.PROFILE_DIR / "shopee_profile")
+        # Kill worker profiles Chrome
+        for tid in range(1, 11):
+            profile_path = bt.PROFILE_DIR / f"shopee_profile_{tid}"
+            bt.force_kill_chrome_for_profile(profile_path)
+            
+        # Kill any zombie chromedriver.exe processes
+        import subprocess
+        subprocess.run(
+            ['taskkill', '/F', '/IM', 'chromedriver.exe', '/T'],
+            capture_output=True, timeout=5
+        )
+    except Exception:
+        pass
+
+    current_state = "IDLE"
+    push_dashboard_log("Hệ thống đã được tắt triệt để thành công!", "SUCCESS")
+
+    # 4. Shutdown Python server after a short delay (so the response can finish sending)
+    def stop_server():
+        time.sleep(1.0)
+        os._exit(0)
+
+    threading.Thread(target=stop_server, daemon=True).start()
+    return jsonify({"status": "success", "message": "Hệ thống đang tắt..."})
+
 # Open input file Link_shopee.txt in default editor
 @app.route("/api/open-input", methods=["POST"])
 def open_input():
@@ -320,6 +369,40 @@ def logs_stream():
     return Response(event_stream(), mimetype="text/event-stream")
 
 if __name__ == "__main__":
+    # Dọn dẹp triệt để các tiến trình chạy ngầm của tool từ phiên chạy trước
+    current_pid = os.getpid()
+    try:
+        import subprocess
+        # 1. Tắt các tiến trình dashboard_app.py cũ (không tắt chính nó)
+        ps_kill_python = (
+            "Get-CimInstance Win32_Process | "
+            f"Where-Object {{ $_.Name -eq 'python.exe' -and $_.CommandLine -like '*dashboard_app.py*' -and $_.ProcessId -ne {current_pid} }} | "
+            "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+        )
+        subprocess.run(
+            ['powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-Command', ps_kill_python],
+            capture_output=True, timeout=5
+        )
+        
+        # 2. Tắt các trình duyệt Chrome liên quan tới tool
+        ps_kill_chrome = (
+            "Get-CimInstance Win32_Process | "
+            "Where-Object { $_.Name -eq 'chrome.exe' -and $_.CommandLine -like '*shopee_profile*' } | "
+            "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+        )
+        subprocess.run(
+            ['powershell', '-NoProfile', '-WindowStyle', 'Hidden', '-Command', ps_kill_chrome],
+            capture_output=True, timeout=5
+        )
+        
+        # 3. Tắt chromedriver.exe chạy ngầm
+        subprocess.run(
+            ['taskkill', '/F', '/IM', 'chromedriver.exe', '/T'],
+            capture_output=True, timeout=5
+        )
+    except Exception:
+        pass
+
     import socket
     # Try to find a free port, default to 5000
     port = 5000

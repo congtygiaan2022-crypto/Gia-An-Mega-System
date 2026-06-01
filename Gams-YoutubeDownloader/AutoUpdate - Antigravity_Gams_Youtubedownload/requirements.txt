@@ -1,4 +1,0 @@
-requests
-selenium
-yt-dlp
-google-api-python-client

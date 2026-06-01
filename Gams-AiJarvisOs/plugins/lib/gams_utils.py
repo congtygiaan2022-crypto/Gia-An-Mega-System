@@ -67,7 +67,14 @@ class DataManager:
                 self.links[index]['data'] = data
                 if 'total_followers' in data and data['total_followers']:
                      self.links[index]['total_followers'] = data['total_followers']
-            if post_info:
+            if status == "Xong":
+                if post_info:
+                    self.links[index]['latest_post_date'] = post_info.get("date", "")
+                    self.links[index]['latest_post_title'] = post_info.get("title", "")
+                else:
+                    self.links[index]['latest_post_date'] = "-"
+                    self.links[index]['latest_post_title'] = "-"
+            elif post_info:
                 self.links[index]['latest_post_date'] = post_info.get("date", "")
                 self.links[index]['latest_post_title'] = post_info.get("title", "")
             
@@ -164,20 +171,14 @@ class BrowserManager:
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--remote-debugging-port=9222")
         options.add_argument("--start-maximized")
+        options.add_argument("--disable-software-rasterizer")
+        options.add_argument("--log-level=3")
+        options.add_argument("--silent")
         
         user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "plugins", "data", "gams_insight", "user_data"))
         options.add_argument(f"user-data-dir={user_data_dir}")
 
         try:
-            driver_path = ChromeDriverManager(driver_version="143.0.7499.193").install()
-            driver_path = _resolve_chromedriver_path(driver_path)
-            service = ChromeService(driver_path)
-            if sys.platform == "win32":
-                import subprocess
-                try: service.creationflags = subprocess.CREATE_NO_WINDOW
-                except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
-            self.driver = webdriver.Chrome(service=service, options=options)
-        except:
             driver_path = ChromeDriverManager().install()
             driver_path = _resolve_chromedriver_path(driver_path)
             service = ChromeService(driver_path)
@@ -186,6 +187,9 @@ class BrowserManager:
                 try: service.creationflags = subprocess.CREATE_NO_WINDOW
                 except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
             self.driver = webdriver.Chrome(service=service, options=options)
+        except Exception as e:
+            logger.error(f"Failed to launch Chrome driver: {e}")
+            raise e
 
     def close_browser(self):
         if self.driver:
@@ -234,34 +238,85 @@ class BrowserManager:
         script_dismiss = r"""
         try {
             let closed = false;
-            // 1. Try to find popups by typical modal roles and classes
-            const popups = Array.from(document.querySelectorAll('[role="dialog"], .role-dialog, [role="alertdialog"], .modal, .dialog, [aria-modal="true"]'));
-            for (let popup of popups) {
-                // Find buttons inside the popup
-                const buttons = Array.from(popup.querySelectorAll('button, div[role="button"], span[role="button"], a[role="button"]'));
-                for (let btn of buttons) {
-                    const text = (btn.innerText || "").trim().toLowerCase();
-                    const ariaLabel = (btn.getAttribute("aria-label") || "").trim().toLowerCase();
-                    if (["đóng", "close", "hủy", "cancel", "bỏ qua", "skip", "dismiss", "x", "ok", "đã hiểu", "got it", "not now", "lúc khác"].includes(text) ||
-                        ["close", "đóng", "dismiss", "x"].includes(ariaLabel)) {
-                        btn.click();
-                        closed = true;
-                        break;
-                    }
-                }
-                if (!closed) {
-                    // Try to click elements matching close aria-labels or classes inside the popup
-                    const xBtns = Array.from(popup.querySelectorAll('[aria-label*="Close" i], [aria-label*="Đóng" i], [aria-label*="Dismiss" i], .close-button, .close, [class*="close" i]'));
-                    for (let xBtn of xBtns) {
-                        if (xBtn.offsetWidth > 0 && xBtn.offsetHeight > 0) {
-                            xBtn.click();
+            
+            // 1. Target "Nhìn lại tuần qua" (Weekly Review) popup specifically
+            const headings = Array.from(document.querySelectorAll('h1, h2, h3, div, span')).filter(el => {
+                const text = el.innerText || "";
+                return text.includes("Nhìn lại tuần qua") || text.includes("Look back at last week");
+            });
+            
+            if (headings.length > 0) {
+                let parent = headings[0];
+                for (let depth = 0; depth < 5; depth++) {
+                    if (!parent) break;
+                    const xBtns = Array.from(parent.querySelectorAll('[aria-label*="Đóng" i], [aria-label*="Close" i], button, [role="button"], div, span'));
+                    for (let x of xBtns) {
+                        const aria = (x.getAttribute('aria-label') || "").toLowerCase();
+                        const text = (x.innerText || "").trim().toLowerCase();
+                        if (aria === "đóng" || aria === "close" || text === "x" || text === "đóng" || text === "close" || aria.includes("đóng") || aria.includes("close")) {
+                            x.click();
                             closed = true;
                             break;
                         }
                     }
+                    if (closed) break;
+                    parent = parent.parentElement;
                 }
             }
-            // 2. Global check for buttons with close labels if they are visible
+            
+            // 2. Try to find popups by typical modal roles and classes
+            if (!closed) {
+                const popups = Array.from(document.querySelectorAll('[role="dialog"], .role-dialog, [role="alertdialog"], .modal, .dialog, [aria-modal="true"]'));
+                for (let popup of popups) {
+                    const buttons = Array.from(popup.querySelectorAll('button, div[role="button"], span[role="button"], a[role="button"]'));
+                    for (let btn of buttons) {
+                        const text = (btn.innerText || "").trim().toLowerCase();
+                        const ariaLabel = (btn.getAttribute("aria-label") || "").trim().toLowerCase();
+                        if (["đóng", "close", "hủy", "cancel", "bỏ qua", "skip", "dismiss", "x", "ok", "đã hiểu", "got it", "not now", "lúc khác"].includes(text) ||
+                            ["close", "đóng", "dismiss", "x"].includes(ariaLabel)) {
+                            btn.click();
+                            closed = true;
+                            break;
+                        }
+                    }
+                    if (!closed) {
+                        const xBtns = Array.from(popup.querySelectorAll('[aria-label*="Close" i], [aria-label*="Đóng" i], [aria-label*="Dismiss" i], .close-button, .close, [class*="close" i]'));
+                        for (let xBtn of xBtns) {
+                            if (xBtn.offsetWidth > 0 && xBtn.offsetHeight > 0) {
+                                xBtn.click();
+                                closed = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 3. Global check for close elements (aria-labels)
+            if (!closed) {
+                const closeSelectors = [
+                    '[aria-label="Đóng"]',
+                    '[aria-label="Close"]',
+                    '[aria-label="Dismiss"]',
+                    '[aria-label*="Đóng" i]',
+                    '[aria-label*="Close" i]',
+                    '.close',
+                    '[class*="close-button"]'
+                ];
+                for (let sel of closeSelectors) {
+                    const elements = Array.from(document.querySelectorAll(sel));
+                    for (let el of elements) {
+                        if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+                            el.click();
+                            closed = true;
+                            break;
+                        }
+                    }
+                    if (closed) break;
+                }
+            }
+            
+            // 4. Global check for buttons with close labels
             if (!closed) {
                 const globalCloseTexts = ["đóng", "close", "bỏ qua", "skip", "đã hiểu", "got it", "not now", "lúc khác"];
                 const allButtons = Array.from(document.querySelectorAll('button, [role="button"], span[role="button"]'));
@@ -432,29 +487,7 @@ class BrowserManager:
                     return text === "Nội dung mới đây" || text === "Recent content";
                 });
                 if (fallbackHeaders.length === 0) {
-                    // Fallback to role="row" style
-                    const rows = Array.from(document.querySelectorAll('[role="row"]')).filter(r => r.innerText.length > 20);
-                    if (rows.length === 0) return null;
-                    const row = rows[0];
-                    const cells = Array.from(row.querySelectorAll('[role="gridcell"], td'));
-                    let title = cells[0] ? cells[0].innerText.split('\n')[0] : "";
-                    let dateFound = "";
-                    let timeEl = row.querySelector('time');
-                    if (timeEl) dateFound = timeEl.innerText;
-                    else if (cells.length >= 3) dateFound = cells[2].innerText;
-                    else {
-                        for (let cell of cells) {
-                            if (cell.innerText.match(/\d/) && cell.innerText.length > 5) {
-                                dateFound = cell.innerText;
-                                break;
-                            }
-                        }
-                    }
-                    if (dateFound.includes('\n')) {
-                        const parts = dateFound.split('\n').map(p => p.trim()).filter(p => p);
-                        dateFound = parts.find(p => p.match(/[a-zA-Z]{3}|Tháng|thg/)) || parts[parts.length - 1];
-                    }
-                    return {date: dateFound, title: title};
+                    return null;
                 }
                 header = fallbackHeaders[0];
             }
@@ -547,7 +580,7 @@ class BrowserManager:
                     "This page isn't available right now"
                 ]
                 
-                has_error = any(k in body_text for k in error_keywords) and len(body_text.strip()) < 500
+                has_error = any(k in body_text for k in error_keywords)
                 is_short = len(body_text.strip()) < 100
                 
                 if has_error or is_short:
@@ -555,7 +588,7 @@ class BrowserManager:
                         reason = "lỗi tải trang Facebook" if has_error else "trang quá ngắn"
                         logger.warning(f"Phát hiện {reason}. Đang thử làm mới trang (refresh)...")
                         self.driver.refresh()
-                        time.sleep(6)
+                        time.sleep(10)
                         self.scroll_page()
                         continue
                     else:
