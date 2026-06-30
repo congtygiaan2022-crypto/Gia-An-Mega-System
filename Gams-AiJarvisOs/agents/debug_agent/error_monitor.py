@@ -1,3 +1,5 @@
+import os
+from core.logger import get_module_logger
 from core.memory_system import memory_system
 from database.mysql_connector import mysql_connector, AgentMemory
 

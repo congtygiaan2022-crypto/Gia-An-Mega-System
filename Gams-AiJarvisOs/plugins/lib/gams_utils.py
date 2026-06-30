@@ -60,9 +60,14 @@ class DataManager:
             self.links[index]['latest_post_title'] = title_val
             self.save_links()
 
-    def update_insight_and_post(self, index, status, data=None, post_info=None):
+    def update_insight_and_post(self, index, status, data=None, post_info=None, error_msg=None):
         if 0 <= index < len(self.links):
             self.links[index]['status'] = status
+            if error_msg:
+                self.links[index]['error'] = error_msg
+            else:
+                self.links[index].pop('error', None)
+                
             if data:
                 self.links[index]['data'] = data
                 if 'total_followers' in data and data['total_followers']:
@@ -127,6 +132,30 @@ def _resolve_chromedriver_path(raw_path: str) -> str:
     return raw_path
 
 
+def is_browser_disconnected_exception(e) -> bool:
+    err_str = str(e).lower()
+    indicators = [
+        "connection refused", 
+        "connectionrefusederror", 
+        "max retries exceeded", 
+        "invalid session id", 
+        "chrome not reachable",
+        "target window already closed",
+        "no such window",
+        "disconnected",
+        "active refused",
+        "10061",
+        "10054",
+        "connectionreseterror",
+        "forcibly closed",
+        "httpconnection",
+        "urllib3",
+        "protocolerror",
+        "socket"
+    ]
+    return any(ind in err_str for ind in indicators)
+
+
 class BrowserManager:
     def __init__(self, portable_path):
         self.driver = None
@@ -134,13 +163,22 @@ class BrowserManager:
         
     def check_alive(self):
         if not self.driver: return False
+        # Fast socket check on remote debugging port to avoid urllib3 retry hangs
+        import socket
+        try:
+            with socket.create_connection(("127.0.0.1", 9222), timeout=0.5):
+                pass
+        except Exception:
+            return False
+            
         try:
             _ = self.driver.current_url
             return True
-        except: return False
+        except Exception:
+            return False
 
     def launch_browser(self):
-        # Kill ONLY Chrome processes using this exact profile dir (psutil — không kill Chrome khác)
+        # Kill conflicting Chrome processes (using port 9222 or our user data dir)
         user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "plugins", "data", "gams_insight", "user_data"))
         try:
             profile_dir_norm = os.path.normcase(os.path.normpath(user_data_dir))
@@ -150,46 +188,75 @@ class BrowserManager:
                     if "chrome" not in name:
                         continue
                     cmdline = proc.info["cmdline"] or []
+                    should_kill = False
                     for arg in cmdline:
-                        arg_norm = os.path.normcase(os.path.normpath(arg.split("=", 1)[-1]))
+                        arg_val = arg.split("=", 1)[-1].strip('"\'')
+                        arg_norm = os.path.normcase(os.path.normpath(arg_val))
                         if "user-data-dir" in arg and arg_norm == profile_dir_norm:
-                            try:
-                                proc.terminate()
-                            except Exception:
-                                pass
+                            should_kill = True
                             break
+                        if "remote-debugging-port=9222" in arg:
+                            should_kill = True
+                            break
+                    if should_kill:
+                        try:
+                            proc.kill()
+                            logger.info(f"Killed conflicting Chrome process {proc.pid} ({proc.name()})")
+                        except Exception:
+                            pass
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     continue
-            time.sleep(1.5)
-        except Exception:
-            pass
+            time.sleep(2.0)
+        except Exception as e:
+            logger.warning(f"Error while killing conflicting Chrome processes: {e}")
 
         options = Options()
         options.binary_location = self.portable_path
-        options.add_argument("--disable-gpu")
-        options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
         options.add_argument("--remote-debugging-port=9222")
         options.add_argument("--start-maximized")
-        options.add_argument("--disable-software-rasterizer")
         options.add_argument("--log-level=3")
         options.add_argument("--silent")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-gpu")
         
         user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "plugins", "data", "gams_insight", "user_data"))
         options.add_argument(f"user-data-dir={user_data_dir}")
 
+        # Clean up lock files to prevent Chrome launch issues after crash
+        for lock_name in ["lockfile", "Lock", "SingletonLock", "SingletonSocket", "SingletonCookie"]:
+            lock_path = os.path.join(user_data_dir, lock_name)
+            if os.path.exists(lock_path):
+                try:
+                    os.remove(lock_path)
+                    logger.info(f"Deleted old Chrome lock file: {lock_path}")
+                except Exception as le:
+                    logger.warning(f"Could not delete Chrome lock file {lock_path}: {le}")
+
         try:
-            driver_path = ChromeDriverManager().install()
-            driver_path = _resolve_chromedriver_path(driver_path)
-            service = ChromeService(driver_path)
+            logger.info("Launching Chrome using Selenium Manager (built-in)...")
+            service = ChromeService()
             if sys.platform == "win32":
                 import subprocess
                 try: service.creationflags = subprocess.CREATE_NO_WINDOW
                 except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
             self.driver = webdriver.Chrome(service=service, options=options)
-        except Exception as e:
-            logger.error(f"Failed to launch Chrome driver: {e}")
-            raise e
+            logger.info("Successfully launched Chrome using Selenium Manager.")
+        except Exception as manager_err:
+            logger.warning(f"Selenium Manager launch failed: {manager_err}. Falling back to ChromeDriverManager...")
+            try:
+                driver_path = ChromeDriverManager().install()
+                driver_path = _resolve_chromedriver_path(driver_path)
+                service = ChromeService(driver_path)
+                if sys.platform == "win32":
+                    import subprocess
+                    try: service.creationflags = subprocess.CREATE_NO_WINDOW
+                    except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
+                self.driver = webdriver.Chrome(service=service, options=options)
+                logger.info("Successfully launched Chrome using ChromeDriverManager fallback.")
+            except Exception as e:
+                logger.error(f"Failed to launch Chrome driver with fallback: {e}")
+                raise e
 
     def close_browser(self):
         if self.driver:
@@ -208,7 +275,8 @@ class BrowserManager:
                         continue
                     cmdline = proc.info["cmdline"] or []
                     for arg in cmdline:
-                        arg_norm = os.path.normcase(os.path.normpath(arg.split("=", 1)[-1]))
+                        arg_val = arg.split("=", 1)[-1].strip('"\'')
+                        arg_norm = os.path.normcase(os.path.normpath(arg_val))
                         if "user-data-dir" in arg and arg_norm == profile_dir_norm:
                             to_kill.append(proc)
                             break
@@ -216,14 +284,9 @@ class BrowserManager:
                     continue
             for p in to_kill:
                 try:
-                    p.terminate()
+                    p.kill()
                 except Exception:
                     pass
-            if to_kill:
-                gone, alive = psutil.wait_procs(to_kill, timeout=3.0)
-                for p in alive:
-                    try: p.kill()
-                    except Exception: pass
         except Exception:
             pass
 
@@ -231,6 +294,40 @@ class BrowserManager:
         self.close_browser()
         time.sleep(2)
         self.launch_browser()
+
+    def extract_total_followers_from_home(self, business_id, asset_id):
+        url = f"https://business.facebook.com/latest/home?business_id={business_id}&asset_id={asset_id}"
+        if not self.navigate_to(url):
+            return None
+        time.sleep(5)
+        self.dismiss_popups()
+        try:
+            body_text = self.driver.find_element(By.TAG_NAME, "body").text
+            lines = body_text.split('\n')
+            for i, line in enumerate(lines):
+                line = line.strip()
+                # Check for "Người theo dõi trên Facebook" or "Facebook followers"
+                if line in ["Người theo dõi trên Facebook", "Facebook followers"]:
+                    if i + 1 < len(lines):
+                        val = lines[i+1].strip()
+                        # Verify it's a number like 1, 1.2K, 10M, etc.
+                        if re.match(r'^[\d\.,\s]+[KMB]?$', val, re.IGNORECASE):
+                            return val
+                # Alternative formats
+                elif "người theo dõi" in line.lower() or "followers" in line.lower():
+                    # Match patterns like "1K người theo dõi" or "10,500 followers"
+                    match = re.search(r"([\d\.,]+[KMB]?)\s*(?:người theo dõi|followers)", line, re.IGNORECASE)
+                    if match:
+                        return match.group(1)
+                    # Or check preceding/succeeding line
+                    if i + 1 < len(lines) and re.match(r'^[\d\.,\s]+[KMB]?$', lines[i+1].strip()):
+                        return lines[i+1].strip()
+            return None
+        except Exception as e:
+            if is_browser_disconnected_exception(e):
+                raise e
+            logger.error(f"Error extracting total followers from home: {e}")
+            return None
 
     def dismiss_popups(self) -> bool:
         if not self.driver:
@@ -318,7 +415,7 @@ class BrowserManager:
             
             // 4. Global check for buttons with close labels
             if (!closed) {
-                const globalCloseTexts = ["đóng", "close", "bỏ qua", "skip", "đã hiểu", "got it", "not now", "lúc khác"];
+                const globalCloseTexts = ["đóng", "close", "bỏ qua", "skip", "đã hiểu", "got it", "not now", "lúc khác", "hiển thị sau"];
                 const allButtons = Array.from(document.querySelectorAll('button, [role="button"], span[role="button"]'));
                 for (let btn of allButtons) {
                     const text = (btn.innerText || "").trim().toLowerCase();
@@ -344,33 +441,49 @@ class BrowserManager:
                     break
             return any_closed
         except Exception as e:
+            if is_browser_disconnected_exception(e):
+                raise e
             logger.warning(f"Lỗi khi kiểm tra/tắt popup: {e}")
             return False
 
     def navigate_to(self, url):
-        if not self.check_alive(): self.launch_browser()
+        try:
+            if not self.check_alive(): 
+                self.launch_browser()
+        except Exception as e:
+            logger.warning(f"Lỗi kiểm tra/khởi chạy trình duyệt: {e}")
+            try:
+                self.relaunch_browser()
+            except:
+                return False
         try:
             self.driver.get(url)
             time.sleep(2)
             self.dismiss_popups()
             return True
-        except:
-            self.relaunch_browser()
+        except Exception as e:
+            logger.warning(f"Lỗi truy cập {url}, đang khởi động lại trình duyệt: {e}")
             try:
+                self.relaunch_browser()
                 self.driver.get(url)
                 time.sleep(2)
                 self.dismiss_popups()
                 return True
-            except: return False
+            except Exception as e2:
+                logger.warning(f"Khởi động lại và truy cập thất bại: {e2}")
+                return False
 
     def scroll_page(self):
         if not self.driver: return
-        total_height = int(self.driver.execute_script("return document.body.scrollHeight"))
-        for i in range(1, min(total_height, 3000), 500):
-            self.driver.execute_script(f"window.scrollTo(0, {i});")
-            time.sleep(0.2)
-        self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(1)
+        try:
+            total_height = int(self.driver.execute_script("return document.body.scrollHeight"))
+            for i in range(1, min(total_height, 3000), 500):
+                self.driver.execute_script(f"window.scrollTo(0, {i});")
+                time.sleep(0.2)
+            self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(1)
+        except Exception as e:
+            logger.warning(f"Lỗi khi cuộn trang (có thể trình duyệt mất kết nối): {e}")
 
     def localize_facebook_date(self, date_str):
         if not date_str:
@@ -518,9 +631,23 @@ class BrowserManager:
             
             let dateVal = elements[dateIdx].innerText.trim();
             let titleVal = "";
+            const ignoredTexts = [
+                "xem tất cả nội dung", "nội dung mới đây", "recent content", 
+                "xem hiệu quả", "hiệu quả", "xem kết quả", "xem thông tin chi tiết", 
+                "quảng cáo bài viết", "quảng cáo lại", "tạo bài viết quảng cáo", 
+                "xem bài viết", "chia sẻ", "boost post", "view results", 
+                "view performance", "boost again", "share", "create ad", 
+                "xem thêm", "xem bớt", "xem chi tiết", "xem phân tích", "phân tích"
+            ];
             for (let i = dateIdx - 1; i >= 0; i--) {
                 const text = elements[i].innerText.trim();
-                if (text.length > 5 && text !== "Xem tất cả nội dung" && text !== "Nội dung mới đây" && text !== "Recent content" && !text.match(/^[\d\.,\+%-]+[KMB]?$/)) {
+                const lowerText = text.toLowerCase();
+                if (text.length > 5 && 
+                    !ignoredTexts.includes(lowerText) && 
+                    !lowerText.includes("hiệu quả") && 
+                    !lowerText.includes("quảng cáo") && 
+                    !lowerText.includes("thông tin chi tiết") && 
+                    !text.match(/^[\d\.,\+%-]+[KMB]?$/)) {
                     titleVal = text;
                     break;
                 }
@@ -667,7 +794,7 @@ class BrowserManager:
                     if i + 1 < len(lines):
                         val_line = lines[i+1].strip()
                         # Match numbers, K, M, B, dots, commas OR hyphens/dashes, including Vietnamese scale words
-                        if re.match(r'^([+-]?[\d\.,\s]+(?:triệu|tỷ|nghìn|ngàn|K|M|B)?|‑‑|--|-)$', val_line, re.IGNORECASE):
+                        if re.match(r'^([<>~+-]?\s*[\d\.,\s]+(?:triệu|tỷ|nghìn|ngàn|K|M|B)?|‑‑|--|-)$', val_line, re.IGNORECASE):
                             val = val_line
                             if val in ["‑‑", "--", "-"]:
                                 val = "0"
@@ -683,6 +810,8 @@ class BrowserManager:
                 
             return data
         except Exception as e:
+            if is_browser_disconnected_exception(e):
+                raise e
             logger.error(f"Error extracting data: {e}")
             return {}
 

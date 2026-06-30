@@ -93,9 +93,11 @@ def build_driver_for_account(uid: str = ""):
 
     if cfg.get("headless", False):
         options.add_argument("--headless=new")
-    options.add_argument("--no-sandbox")
+    options.add_argument("--window-size=1920,1080")
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-hang-monitor")
+    options.add_argument("--disable-notifications")
     options.add_argument("--disable-dev-shm-usage")
-    options.add_argument("--disable-gpu")
     options.add_argument("--no-first-run")
     options.add_argument("--no-default-browser-check")
     options.add_argument("--disable-crash-reporter")

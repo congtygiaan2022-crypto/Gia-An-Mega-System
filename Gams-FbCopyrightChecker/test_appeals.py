@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from modules.fb_login import build_driver, login
-from modules.copyright_checker import switch_context_via_menu
+from modules.copyright_checker import switch_context_via_menu, navigate_to_support_inbox
 from selenium.webdriver.common.by import By
 
 def test_appeals():
@@ -23,9 +23,12 @@ def test_appeals():
         switch_context_via_menu(driver, "Tin Này Trending")
         time.sleep(3)
         
-        print("Navigating to Appeals page...")
-        driver.get("https://www.facebook.com/support/?tab_type=APPEALS")
-        time.sleep(8)
+        print("Navigating to Support Inbox via UI...")
+        nav_ok = navigate_to_support_inbox(driver)
+        if not nav_ok:
+            print("UI navigation failed, trying direct URL fallback...")
+            driver.get("https://www.facebook.com/support/?tab_type=APPEALS")
+        time.sleep(5)
         
         # Dump all text to see what is actually there
         print("Dumping page text...")

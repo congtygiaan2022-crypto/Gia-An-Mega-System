@@ -108,11 +108,22 @@ def get_global_config():
     conn.close()
     
     if row:
-        return json.loads(row[0])
+        cfg = json.loads(row[0])
+        if "apply_fb_global" not in cfg:
+            cfg["apply_fb_global"] = False
+        if "global_facebook_account" not in cfg:
+            cfg["global_facebook_account"] = ""
+        return cfg
     return {
         "loop_type": "1", "loop_count": "1", 
         "delay_type": "fixed", "delay_fixed": "10", 
-        "delay_rand_min": "10", "delay_rand_max": "60", "delay_times": []
+        "delay_rand_all_min": "43200", "delay_rand_all_max": "86400",
+        "delay_rand_ind_min": "43200", "delay_rand_ind_max": "86400", 
+        "delay_times": [],
+        "gpt_limit_action": "wait_limit",
+        "apply_gpt_limit_global": True,
+        "apply_fb_global": False,
+        "global_facebook_account": ""
     }
 
 def save_global_config(config_dict):

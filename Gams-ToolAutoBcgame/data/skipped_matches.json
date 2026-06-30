@@ -37,5 +37,16 @@
         "date_scraped": "2026-05-15",
         "skipped_at": "2026-05-15T17:50:51.368702",
         "reason": "No Over 0.5 market found"
+    },
+    {
+        "time_str": "02:00",
+        "home": "Ma Rốc",
+        "away": "Na Uy",
+        "tx_val": "2 3/4",
+        "detail_url": "https://bongda.wap.vn/phong-do-ma-roc-vs-na-uy-6245-894155.html",
+        "raw_line": "02:00 | Ma Rốc vs Na Uy - TÀI 2 3/4",
+        "date_scraped": "2026-06-07",
+        "skipped_at": "2026-06-07T23:13:43.703617",
+        "reason": "No Over 0.5 market found"
     }
 ]

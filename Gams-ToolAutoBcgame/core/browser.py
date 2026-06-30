@@ -98,19 +98,30 @@ class BrowserController:
                 pass
             
             # Nạp Profile mới (v2) để tránh kẹt profile cũ
-            self._log("🌐 Đang mở Chrome với Profile mới (v2)...")
+            portable_chrome_path = os.path.join(current_dir, "bin", "chrome", "chrome.exe")
+            browser_executable_path = None
             chrome_version = None
-            try:
-                import winreg
-                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\BLBeacon")
-                version, _ = winreg.QueryValueEx(key, "version")
-                chrome_version = int(version.split('.')[0])
-                self._log(f"🔎 Đã phát hiện phiên bản Chrome: {chrome_version}")
-            except Exception as ev:
-                self._log(f"⚠️ Không thể phát hiện phiên bản Chrome từ registry: {ev}", "DEBUG")
+
+            if os.path.exists(portable_chrome_path):
+                self._log(f"🚀 Sử dụng Chrome portable tại: {portable_chrome_path}")
+                browser_executable_path = portable_chrome_path
+                chrome_version = 124
+            else:
+                self._log("⚠️ Không tìm thấy Chrome portable, thử phát hiện Chrome hệ thống...", "WARNING")
+                try:
+                    import winreg
+                    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Google\Chrome\BLBeacon")
+                    version, _ = winreg.QueryValueEx(key, "version")
+                    chrome_version = int(version.split('.')[0])
+                    self._log(f"🔎 Đã phát hiện phiên bản Chrome hệ thống: {chrome_version}")
+                except Exception as ev:
+                    self._log(f"⚠️ Không thể phát hiện phiên bản Chrome từ registry: {ev}", "DEBUG")
+
+            self._log("🌐 Đang mở Chrome...")
 
             self.driver = uc.Chrome(
                 options=options,
+                browser_executable_path=browser_executable_path,
                 version_main=chrome_version,
                 user_data_dir=profile_dir,
                 use_subprocess=True,
@@ -166,6 +177,23 @@ class BrowserController:
             self._log(f"⚠️ Lỗi khi dọn dẹp tiến trình Chrome: {e}", "DEBUG")
 
 
+
+    def check_alive(self) -> bool:
+        """Kiểm tra xem trình duyệt còn hoạt động và cửa sổ còn mở hay không"""
+        if not self.driver or not self.is_running:
+            return False
+        try:
+            # Truy cập thuộc tính đơn giản để kiểm tra xem session còn sống không
+            _ = self.driver.current_window_handle
+            return True
+        except Exception:
+            self.is_running = False
+            try:
+                self.driver.quit()
+            except Exception:
+                pass
+            self.driver = None
+            return False
 
     def stop(self):
         """Đóng trình duyệt"""

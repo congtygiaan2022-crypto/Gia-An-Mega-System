@@ -1,0 +1,311 @@
+"""
+Plugin: bao_cao_facebook_ads
+
+This module provides a safe, importable implementation for:
+    importlib.import_module("plugins.bao_cao_facebook_ads")
+
+It is dependency-light and designed to avoid import-time failures.
+"""
+
+from __future__ import annotations
+
+from datetime import date, datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+PLUGIN_NAME = "bao_cao_facebook_ads"
+PLUGIN_DESCRIPTION = "Tạo báo cáo Facebook Ads cơ bản từ dữ liệu đầu vào."
+PLUGIN_VERSION = "1.0.53"
+
+
+def _to_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None or value == "":
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_int(value: Any, default: int = 0) -> int:
+    try:
+        if value is None or value == "":
+            return default
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _parse_date(value: Any) -> Optional[date]:
+    if value is None:
+        return None
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, str):
+        value = value.strip()
+        if not value:
+            return None
+        for fmt in (
+            "%Y-%m-%d",
+            "%d/%m/%Y",
+            "%Y/%m/%d",
+            "%d-%m-%Y",
+            "%Y-%m-%dT%H:%M:%S",
+            "%Y-%m-%d %H:%M:%S",
+        ):
+            try:
+                return datetime.strptime(value, fmt).date()
+            except ValueError:
+                continue
+        try:
+            return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+        except ValueError:
+            return None
+    return None
+
+
+def _safe_div(numerator: float, denominator: float) -> float:
+    if denominator == 0:
+        return 0.0
+    return numerator / denominator
+
+
+def _extract_conversion_value(record: Dict[str, Any]) -> int:
+    direct_value = record.get("conversions", record.get("results", record.get("leads", 0)))
+    if isinstance(direct_value, (int, float, str)) or direct_value is None:
+        return _to_int(direct_value)
+
+    if isinstance(direct_value, list):
+        total = 0
+        for item in direct_value:
+            if isinstance(item, dict):
+                total += _to_int(
+                    item.get("value", item.get("count", item.get("total", 0)))
+                )
+            else:
+                total += _to_int(item)
+        return total
+
+    if isinstance(direct_value, dict):
+        return _to_int(
+            direct_value.get("value", direct_value.get("count", direct_value.get("total", 0)))
+        )
+
+    return 0
+
+
+def _extract_revenue_value(record: Dict[str, Any]) -> float:
+    direct_value = record.get("revenue", record.get("purchase_value", 0))
+    if isinstance(direct_value, (int, float, str)) or direct_value is None:
+        return _to_float(direct_value)
+
+    if isinstance(direct_value, list):
+        total = 0.0
+        for item in direct_value:
+            if isinstance(item, dict):
+                total += _to_float(
+                    item.get("value", item.get("amount", item.get("total", 0)))
+                )
+            else:
+                total += _to_float(item)
+        return total
+
+    if isinstance(direct_value, dict):
+        return _to_float(
+            direct_value.get("value", direct_value.get("amount", direct_value.get("total", 0)))
+        )
+
+    return 0.0
+
+
+def _normalize_record(record: Dict[str, Any]) -> Dict[str, Any]:
+    spend = _to_float(record.get("spend"))
+    impressions = _to_int(record.get("impressions"))
+    clicks = _to_int(record.get("clicks"))
+    conversions = _extract_conversion_value(record)
+    revenue = _extract_revenue_value(record)
+    record_date = _parse_date(record.get("date"))
+
+    return {
+        "campaign_name": record.get("campaign_name")
+        or record.get("campaign")
+        or record.get("name")
+        or "Unknown Campaign",
+        "date": record_date.isoformat() if record_date else None,
+        "spend": spend,
+        "impressions": impressions,
+        "clicks": clicks,
+        "conversions": conversions,
+        "revenue": revenue,
+        "cpc": round(_safe_div(spend, clicks), 4),
+        "ctr": round(_safe_div(clicks, impressions) * 100.0, 4),
+        "cpm": round(_safe_div(spend, impressions) * 1000.0, 4),
+        "cpa": round(_safe_div(spend, conversions), 4),
+        "roas": round(_safe_div(revenue, spend), 4),
+        "raw": record,
+    }
+
+
+def _default_date_range() -> Dict[str, str]:
+    today = date.today()
+    start = today - timedelta(days=7)
+    return {"date_from": start.isoformat(), "date_to": today.isoformat()}
+
+
+def summarize_records(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    normalized = [_normalize_record(r) for r in records if isinstance(r, dict)]
+
+    total_spend = sum(r["spend"] for r in normalized)
+    total_impressions = sum(r["impressions"] for r in normalized)
+    total_clicks = sum(r["clicks"] for r in normalized)
+    total_conversions = sum(r["conversions"] for r in normalized)
+    total_revenue = sum(r["revenue"] for r in normalized)
+
+    return {
+        "campaign_count": len(normalized),
+        "spend": round(total_spend, 2),
+        "impressions": total_impressions,
+        "clicks": total_clicks,
+        "conversions": total_conversions,
+        "revenue": round(total_revenue, 2),
+        "ctr": round(_safe_div(total_clicks, total_impressions) * 100.0, 4),
+        "cpc": round(_safe_div(total_spend, total_clicks), 4),
+        "cpm": round(_safe_div(total_spend, total_impressions) * 1000.0, 4),
+        "cpa": round(_safe_div(total_spend, total_conversions), 4),
+        "roas": round(_safe_div(total_revenue, total_spend), 4),
+    }
+
+
+def generate_report(
+    data: Optional[List[Dict[str, Any]]] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    account_id: Optional[str] = None,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """
+    Generate a basic Facebook Ads report from provided data.
+
+    Parameters:
+        data: List of campaign/adset/ad records.
+        date_from: Start date string.
+        date_to: End date string.
+        account_id: Optional advertising account identifier.
+        kwargs: Extra ignored parameters for compatibility.
+
+    Returns:
+        Dict containing metadata, summary, and normalized rows.
+    """
+    del kwargs
+
+    if data is None:
+        data = []
+
+    if not isinstance(data, list):
+        data = [data] if isinstance(data, dict) else []
+
+    if not date_from or not date_to:
+        defaults = _default_date_range()
+        date_from = date_from or defaults["date_from"]
+        date_to = date_to or defaults["date_to"]
+
+    date_from_obj = _parse_date(date_from)
+    date_to_obj = _parse_date(date_to)
+
+    dict_rows = [item for item in data if isinstance(item, dict)]
+    normalized_rows = [_normalize_record(item) for item in dict_rows]
+
+    if date_from_obj or date_to_obj:
+        filtered_rows: List[Dict[str, Any]] = []
+        for row in normalized_rows:
+            row_date_obj = _parse_date(row.get("date"))
+            if row_date_obj is None:
+                filtered_rows.append(row)
+                continue
+            if date_from_obj and row_date_obj < date_from_obj:
+                continue
+            if date_to_obj and row_date_obj > date_to_obj:
+                continue
+            filtered_rows.append(row)
+        normalized_rows = filtered_rows
+
+    summary = summarize_records([row["raw"] for row in normalized_rows])
+
+    return {
+        "success": True,
+        "plugin": PLUGIN_NAME,
+        "version": PLUGIN_VERSION,
+        "account_id": account_id,
+        "date_from": date_from,
+        "date_to": date_to,
+        "summary": summary,
+        "rows": normalized_rows,
+        "message": "Báo cáo Facebook Ads đã được tạo thành công.",
+    }
+
+
+def run(**kwargs: Any) -> Dict[str, Any]:
+    """
+    Standard plugin entry point used by many runners.
+    """
+    data = kwargs.get("data")
+    if data is None:
+        data = kwargs.get("records")
+    if data is None:
+        data = []
+
+    date_from = kwargs.get("date_from")
+    date_to = kwargs.get("date_to")
+    account_id = kwargs.get("account_id") or kwargs.get("ad_account_id")
+
+    filtered_kwargs = dict(kwargs)
+    filtered_kwargs.pop("data", None)
+    filtered_kwargs.pop("records", None)
+    filtered_kwargs.pop("date_from", None)
+    filtered_kwargs.pop("date_to", None)
+    filtered_kwargs.pop("account_id", None)
+    filtered_kwargs.pop("ad_account_id", None)
+
+    return generate_report(
+        data=data,
+        date_from=date_from,
+        date_to=date_to,
+        account_id=account_id,
+        **filtered_kwargs,
+    )
+
+
+def execute(**kwargs: Any) -> Dict[str, Any]:
+    """
+    Compatibility alias for plugin systems expecting `execute`.
+    """
+    return run(**kwargs)
+
+
+class Plugin:
+    """
+    Simple class-based interface for runners that instantiate plugins.
+    """
+
+    name = PLUGIN_NAME
+    description = PLUGIN_DESCRIPTION
+    version = PLUGIN_VERSION
+
+    def run(self, **kwargs: Any) -> Dict[str, Any]:
+        return run(**kwargs)
+
+    def execute(self, **kwargs: Any) -> Dict[str, Any]:
+        return run(**kwargs)
+
+
+__all__ = [
+    "PLUGIN_NAME",
+    "PLUGIN_DESCRIPTION",
+    "PLUGIN_VERSION",
+    "Plugin",
+    "execute",
+    "generate_report",
+    "run",
+    "summarize_records",
+]

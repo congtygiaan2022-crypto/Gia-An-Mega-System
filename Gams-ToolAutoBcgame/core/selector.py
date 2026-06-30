@@ -23,10 +23,15 @@ import unicodedata
 # Từ điển dịch tên diacritic-stripped
 TRANSLATIONS = {
     "viet nam": "vietnam",
+    "saudi arabia": "saudi arabia",
+    "sa-u-di a-ra-bi-a": "saudi arabia",
+    "a rap saudi": "saudi arabia",
+    "saudi": "saudi arabia",
+    "a rap xe ut": "saudi arabia",
+    "campuchia": "cambodia",
+    "ma roc": "morocco",
     "bo dao nha": "portugal",
     "tay ban nha": "spain",
-    "saudi arabia": "saudi arabia",
-    "a rap xe ut": "saudi arabia",
     "cong hoa sec": "czech republic",
     "nam phi": "south africa",
     "bac ireland": "northern ireland",

@@ -86,17 +86,29 @@ class BettingEngine:
                     input.focus();
                     input.click();
                     
-                    // Cách 'Ctrl + A' và 'Paste' cực mạnh:
-                    input.select(); // Bôi đen toàn bộ (giống Ctrl + A)
-                    document.execCommand('delete'); // Xóa sạch (giống Backspace)
+                    // Native Setter cho React/Vue
+                    let nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value");
+                    if (nativeSetter && nativeSetter.set) {{
+                        try {{
+                            nativeSetter.set.call(input, '{clean_amount}');
+                        }} catch(e) {{
+                            input.value = '{clean_amount}';
+                        }}
+                    }} else {{
+                        input.value = '{clean_amount}';
+                    }}
                     
-                    // Dùng insertText để giả lập việc 'Gõ/Dán' thật sự vào ô nhập
-                    // Cách này React/Vue không bao giờ chặn được
-                    document.execCommand('insertText', false, '{clean_amount}');
+                    // Fallback execCommand
+                    try {{
+                        input.select();
+                        document.execCommand('delete');
+                        document.execCommand('insertText', false, '{clean_amount}');
+                    }} catch(e) {{}}
                     
                     // Kích hoạt thêm sự kiện cho chắc chắn
                     input.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    input.dispatchEvent(new Event('blur', {{ bubbles: true }}));
                     
                     return true;
                 }}
@@ -150,8 +162,7 @@ class BettingEngine:
         """Xoá toàn bộ các cược cũ đang có trong phiếu cược để tránh cược xiên"""
         js_clear = """
             function clearAll() {
-                let slipHost = document.querySelector('div#betby');
-                if (!slipHost) return "Already Empty (No container)";
+                let slipHost = document.querySelector('div#betby') || document.querySelector('[class*="slip"]') || document.querySelector('[class*="Slip"]') || document;
                 
                 function findInShadow(root, selector, textFilter) {
                     let results = [];
@@ -167,25 +178,35 @@ class BettingEngine:
                     return results;
                 }
 
-                // Kiểm tra xem có kèo nào trong slip không (BCGame thường có class liên quan đến 'bet-item' hoặc 'outcome')
-                let items = findInShadow(slipHost, 'div', '');
-                let hasBets = items.some(el => {
-                    let rect = el.getBoundingClientRect();
-                    return rect.width > 100 && (el.innerText || '').length > 5 && (el.innerText || '').includes(' vs ');
-                });
-
-                if (!hasBets) return "Already Empty (No bets found)";
-
-                // Chỉ clear nếu có kèo
-                let trashBtns = findInShadow(slipHost, 'div, button, svg', 'Xóa tất cả');
-                if (trashBtns.length === 0) trashBtns = findInShadow(slipHost, 'div, button, svg', 'Clear all');
+                // Tìm các nút Xóa tất cả / Clear all
+                let trashBtns = findInShadow(slipHost, 'div, button, svg, span', 'Xóa tất cả');
+                if (trashBtns.length === 0) trashBtns = findInShadow(slipHost, 'div, button, svg, span', 'Clear all');
+                if (trashBtns.length === 0) trashBtns = findInShadow(slipHost, 'div, button, svg, span', 'Xóa');
                 
                 if (trashBtns.length > 0) {
                     trashBtns[0].click();
-                    return "Cleared All Bets";
+                    return "Cleared All Bets via button";
                 }
 
-                return "Could not clear but bets exist";
+                // Thử tìm các nút đóng đơn lẻ nếu không thấy nút xóa tất cả
+                let closeBtns = findInShadow(slipHost, '[class*="close"], [class*="remove"], [class*="delete"], button', '');
+                closeBtns = closeBtns.filter(el => {
+                    let rect = el.getBoundingClientRect();
+                    return rect.width > 5 && rect.height > 5 && rect.width < 50 && rect.height < 50; 
+                });
+                
+                if (closeBtns.length > 0) {
+                    let clickedCount = 0;
+                    for (let btn of closeBtns) {
+                        try {
+                            btn.click();
+                            clickedCount++;
+                        } catch(e) {}
+                    }
+                    return "Clicked " + clickedCount + " individual close buttons";
+                }
+
+                return "Already Empty (No clear buttons found)";
             }
             return clearAll();
         """
@@ -228,21 +249,42 @@ class BettingEngine:
                     singleTabs[0].click();
                 }
 
-                // 2. Tìm ô nhập tiền (Quét kỹ hơn các thuộc tính)
-                let inputs = findInShadow(document, 'input[type="number"], input[type="tel"], input[placeholder="0"], input.bt830, [class*="stake"], [name*="amount"], [name*="stake"]', '');
+                let slipHost = document.querySelector('div#betby') || document;
+
+                // 2. Tìm ô nhập tiền (Chỉ chọn thẻ input thật)
+                let elements = findInShadow(slipHost, 'input, [class*="stake"], [name*="amount"], [name*="stake"]', '');
+                let inputs = [];
+                for (let el of elements) {
+                    if (el.tagName.toLowerCase() === 'input') {
+                        inputs.push(el);
+                    } else {
+                        let childInputs = el.querySelectorAll('input');
+                        for (let child of childInputs) {
+                            inputs.push(child);
+                        }
+                    }
+                }
                 
-                // Lọc bỏ các ô input ẩn hoặc quá nhỏ
+                // Lọc kỹ hơn
                 inputs = inputs.filter(el => {
                     let rect = el.getBoundingClientRect();
-                    return rect.width > 30 && rect.height > 20;
+                    if (rect.width <= 30 || rect.height <= 20) return false;
+                    
+                    let type = (el.getAttribute('type') || '').toLowerCase();
+                    let ph = (el.getAttribute('placeholder') || '').toLowerCase();
+                    let name = (el.getAttribute('name') || '').toLowerCase();
+                    let cls = (el.className || '').toLowerCase();
+                    
+                    return type === 'number' || type === 'tel' || ph.includes('0') || ph.includes('cược') || ph.includes('bet') || ph.includes('stake') || ph.includes('amount') || name.includes('amount') || name.includes('stake') || cls.includes('stake') || cls.includes('amount') || cls.includes('input');
                 });
                 
                 let input = inputs.length > 0 ? inputs[0] : null;
 
                 // 3. Tìm nút Đặt cược
-                let btns = findInShadow(document, 'button', 'Cược');
-                if (btns.length === 0) btns = findInShadow(document, 'button', 'Bet');
-                if (btns.length === 0) btns = findInShadow(document, 'button', 'Place');
+                let btns = findInShadow(slipHost, 'button', 'Cược');
+                if (btns.length === 0) btns = findInShadow(slipHost, 'button', 'Bet');
+                if (btns.length === 0) btns = findInShadow(slipHost, 'button', 'Place');
+                if (btns.length === 0) btns = findInShadow(slipHost, 'button', 'Xác nhận');
                 
                 let btn = btns.length > 0 ? btns[0] : null;
                 

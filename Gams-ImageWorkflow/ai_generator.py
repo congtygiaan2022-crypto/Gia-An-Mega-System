@@ -44,10 +44,6 @@ class AIGenerator:
         
         try:
             sources_to_try = [ai_source]
-            if ai_source == "google":
-                sources_to_try.append("chatgpt")
-            elif ai_source == "chatgpt":
-                sources_to_try.append("google")
 
             output_image_path = os.path.join(output_img_dir, f"{profile_name}_{int(time.time())}.png")
             generated_text = None
@@ -82,6 +78,33 @@ class AIGenerator:
                         except Exception as e:
                             print(f"[{profile_name}] Warning: ChatGPT prompt textarea not found: {e}")
                         time.sleep(5)
+                        
+                        # --- Kiểm tra trạng thái đăng nhập ChatGPT ---
+                        is_logged_in = True
+                        login_selectors = [
+                            'button[data-testid="login-button"]',
+                            'a[href*="auth/login"]',
+                            'button:has-text("Log in")',
+                            'button:has-text("Sign up")',
+                            'button:has-text("Đăng nhập")',
+                            'button:has-text("Đăng ký")',
+                            'a:has-text("Log in")',
+                            'a:has-text("Sign up")',
+                            'a:has-text("Đăng nhập")',
+                            'a:has-text("Đăng ký")'
+                        ]
+                        for sel in login_selectors:
+                            try:
+                                loc = page.locator(sel).first
+                                if loc.count() > 0 and loc.is_visible():
+                                    is_logged_in = False
+                                    break
+                            except:
+                                pass
+                                
+                        if not is_logged_in:
+                            print(f"[{profile_name}] ⚠️ Phát hiện ChatGPT chưa đăng nhập!")
+                            raise Exception("CHATGPT_NOT_LOGGED_IN: ChatGPT chưa được đăng nhập. Yêu cầu tạo tài khoản mới.")
                         
                         if os.path.exists(input_image_path):
                             try:
@@ -142,6 +165,11 @@ class AIGenerator:
                                             text_element = assistant_turns[-1].locator('.markdown')
                                             raw_text = text_element.first.inner_text().strip() if text_element.count() > 0 else assistant_turns[-1].inner_text().strip()
                                             if raw_text:
+                                                # Check if response indicates login requirement
+                                                low_text = raw_text.lower()
+                                                if "please log in" in low_text or "please sign in" in low_text or "need to be logged in" in low_text or "log in to use" in low_text or "logged in to use" in low_text:
+                                                    raise Exception(f"CHATGPT_NOT_LOGGED_IN: ChatGPT yêu cầu đăng nhập: {raw_text}")
+                                                
                                                 if raw_text == last_text:
                                                     stable_count += 1
                                                     if stable_count >= 10: # Khoảng 5 giây không đổi
@@ -153,7 +181,7 @@ class AIGenerator:
                                                     last_text = raw_text
                                                     stable_count = 0
                                     except Exception as text_check_err:
-                                        if "ChatGPT chỉ trả về text" in str(text_check_err):
+                                        if "ChatGPT chỉ trả về text" in str(text_check_err) or "CHATGPT_NOT_LOGGED_IN" in str(text_check_err):
                                             raise text_check_err
                                             
                                     time.sleep(0.5)
@@ -233,6 +261,11 @@ class AIGenerator:
                                     raw_text = markdown_locator.first.inner_text()
                                 else:
                                     raw_text = elements[-1].inner_text()
+                                
+                                if raw_text:
+                                    low_text = raw_text.lower()
+                                    if "please log in" in low_text or "please sign in" in low_text or "need to be logged in" in low_text or "log in to use" in low_text or "logged in to use" in low_text:
+                                        raise Exception(f"CHATGPT_NOT_LOGGED_IN: ChatGPT yêu cầu đăng nhập: {raw_text}")
                                 
                                 # Dọn dẹp các chữ rác nếu có (như Edit, Copy) bị dính vào đầu
                                 import re
@@ -606,7 +639,7 @@ class AIGenerator:
 
                 except Exception as e:
                     errors.append(f"{current_source.upper()}: {e}")
-                    print(f"[{profile_name}] Nguồn {current_source.upper()} thất bại: {e}. Đang thử nguồn dự phòng nếu có...")
+                    print(f"[{profile_name}] Nguồn {current_source.upper()} thất bại: {e}")
                     continue
                 
             if not img_downloaded or not generated_text:

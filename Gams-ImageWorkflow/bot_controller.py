@@ -109,6 +109,8 @@ class BotController:
                         detail = state.get("error_detail", "")
                         if "Hết hạn GPT" in detail or "hết hạn GPT" in detail:
                             db_data[p]["status"] = f"Chờ thử lại (Hết hạn GPT) (Wait: {h:02d}:{m:02d}:{s:02d})"
+                        elif detail:
+                            db_data[p]["status"] = f"{detail} (Wait: {h:02d}:{m:02d}:{s:02d})"
                         else:
                             db_data[p]["status"] = f"Wait: {h:02d}:{m:02d}:{s:02d}"
                     elif st == "WAITING_FOR_SLOT":
@@ -219,6 +221,12 @@ class BotController:
                             if ret_code == 2:
                                 state["status"] = "DELAYING"
                                 state["next_run_time"] = time.time() + 10 # Nghỉ tạm 10s rồi chạy lại
+                                try:
+                                    db_log = db_manager.get_all_status([p])
+                                    last_status = db_log.get(p, {}).get("status", "")
+                                    state["error_detail"] = last_status or "Lỗi tạm thời (Thử lại sau 10s)"
+                                except:
+                                    state["error_detail"] = "Lỗi tạm thời (Thử lại sau 10s)"
                                 continue
                                 
                             # Nếu ret_code == 3 -> Hết hạn hạn mức GPT, nghỉ theo delay cấu hình rồi thử lại loop hiện tại
@@ -226,22 +234,34 @@ class BotController:
                                 state["status"] = "DELAYING"
                                 state["error_detail"] = "Chờ thử lại (Hết hạn GPT)"
                                 
-                                # Tính delay theo cấu hình của người dùng (không đổi loop count)
-                                if delay_type == "fixed":
-                                    d = int(global_cfg.get("delay_fixed", 0))
-                                    state["next_run_time"] = time.time() + d
-                                elif delay_type == "random_individual":
-                                    min_s = int(global_cfg.get("delay_rand_ind_min", 0))
-                                    max_s = int(global_cfg.get("delay_rand_ind_max", 0))
-                                    d = random.randint(min_s, max_s) if max_s >= min_s else 0
-                                    state["next_run_time"] = time.time() + d
-                                elif delay_type == "random_all":
-                                    min_s = int(global_cfg.get("delay_rand_all_min", 0))
-                                    max_s = int(global_cfg.get("delay_rand_all_max", 0))
-                                    d = random.randint(min_s, max_s) if max_s >= min_s else 0
-                                    state["next_run_time"] = time.time() + d
-                                else:
-                                    state["next_run_time"] = time.time() + 300 # Mặc định 5 phút
+                                # Đọc wait time từ config của profile (lấy theo gpt_retry_wait_seconds)
+                                d = None
+                                try:
+                                    p_cfg = db_manager.get_profile_config(p)
+                                    if "gpt_retry_wait_seconds" in p_cfg:
+                                        d = int(p_cfg["gpt_retry_wait_seconds"])
+                                        # Xóa key sau khi đọc để tránh dùng lại ở lượt sau
+                                        del p_cfg["gpt_retry_wait_seconds"]
+                                        db_manager.save_profile_config(p, p_cfg)
+                                except Exception as read_err:
+                                    print(f"Lỗi khi đọc gpt_retry_wait_seconds của {p}: {read_err}")
+                                
+                                if d is None:
+                                    # Tính delay theo cấu hình của người dùng (không đổi loop count)
+                                    if delay_type == "fixed":
+                                        d = int(global_cfg.get("delay_fixed", 0))
+                                    elif delay_type == "random_individual":
+                                        min_s = int(global_cfg.get("delay_rand_ind_min", 0))
+                                        max_s = int(global_cfg.get("delay_rand_ind_max", 0))
+                                        d = random.randint(min_s, max_s) if max_s >= min_s else 0
+                                    elif delay_type == "random_all":
+                                        min_s = int(global_cfg.get("delay_rand_all_min", 0))
+                                        max_s = int(global_cfg.get("delay_rand_all_max", 0))
+                                        d = random.randint(min_s, max_s) if max_s >= min_s else 0
+                                    else:
+                                        d = 300 # Mặc định 5 phút
+                                
+                                state["next_run_time"] = time.time() + d
                                 continue
 
                             # Thành công, tiến tới loop tiếp theo

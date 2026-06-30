@@ -13,7 +13,7 @@ os.environ.setdefault('PYTHONIOENCODING', 'utf-8')
 
 # Patch config để chạy headless
 from modules.config_loader import CONFIG
-CONFIG['selenium']['headless'] = False
+CONFIG['selenium']['headless'] = True
 
 from modules.account_manager import get_manager
 from modules.database import Database
@@ -129,6 +129,7 @@ try:
                 auto_delete=False,
                 account_name=acc.display_name,
                 log_callback=lambda msg: print(f'  [scan] {msg}'),
+                profile_dir=profile_dir,
             )
             print('\nKết quả:')
             print(f'  Tổng vi phạm : {result["total_appeals"]}')

@@ -3,6 +3,10 @@ import json
 import time
 import logging
 import sys
+from dotenv import load_dotenv
+load_dotenv()
+import google.generativeai as genai
+from openai import OpenAI
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
@@ -31,6 +35,62 @@ HEARTBEAT_FILE = os.path.join(PROJECT_ROOT, "bridge", ".heartbeat")
 # Đảm bảo thư mục tồn tại
 os.makedirs(PATH_TO_REQUESTS, exist_ok=True)
 os.makedirs(PATH_TO_RESPONSES, exist_ok=True)
+
+def generate_code_via_llm(prompt: str) -> str:
+    """Gọi LLM (Gemini hoặc OpenAI) để sinh mã nguồn Python."""
+    # 1. Thử Gemini API
+    gemini_key = os.getenv("GEMINI_API_KEY")
+    if gemini_key and gemini_key != "YOUR_GEMINI_KEY":
+        try:
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-2.0-flash")
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return response.text
+        except Exception as e:
+            bridge_logger.warning(f"Gemini API Error: {e}")
+
+    # 2. Thử OpenAI/Freemodel API
+    openai_key = os.getenv("OPENAI_API_KEY")
+    if openai_key and openai_key != "YOUR_OPENAI_KEY":
+        try:
+            base_url = os.getenv("OPENAI_BASE_URL")
+            model = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
+            if base_url:
+                if "freemodel.dev" in base_url:
+                    if not base_url.endswith("/v1"):
+                        base_url = base_url.rstrip("/") + "/v1"
+                    model = "gpt-5.4"
+                client = OpenAI(api_key=openai_key, base_url=base_url)
+            else:
+                if not model.startswith("gpt"):
+                    model = "gpt-4o-mini"
+                client = OpenAI(api_key=openai_key)
+
+            response = client.chat.completions.create(
+                model=model,
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.1
+            )
+            if response and response.choices:
+                return response.choices[0].message.content
+        except Exception as e:
+            bridge_logger.warning(f"OpenAI API Error: {e}")
+
+    return None
+
+def extract_python_code(llm_output: str) -> str:
+    """Trích xuất mã nguồn Python từ code block ```python ... ``` của LLM."""
+    if not llm_output:
+        return ""
+    import re
+    match = re.search(r"```python\s*(.*?)\s*```", llm_output, re.DOTALL | re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    match = re.search(r"```\s*(.*?)\s*```", llm_output, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+    return llm_output.strip()
 
 class AntigravityHandler(FileSystemEventHandler):
     """Xử lý sự kiện khi có file request mới từ UI"""
@@ -115,11 +175,13 @@ class AntigravityHandler(FileSystemEventHandler):
             requirement = data.get("requirement", "")
             
             try:
-                bridge_logger.info(f"Generating code for '{tool_name}'...")
+                bridge_logger.info(f"Generating code for '{tool_name}' using Antigravity AI Engine...")
+                
+                plugin_dir = os.path.join(PROJECT_ROOT, "plugins")
+                plugin_path = os.path.join(plugin_dir, f"{tool_name}.py")
                 
                 if task_type == "fix_plugin":
                     error_trace = data.get("error", "")
-                    prompt = f"Fix the following python plugin '{tool_name}' which crashed with the stacktrace:\n{error_trace}\nYour output should overwrite the existing file entirely with the fixed version."
                     
                     # Log sự kiện phát hiện lỗi
                     self._write_selfrepair_log(
@@ -133,35 +195,69 @@ class AntigravityHandler(FileSystemEventHandler):
                         message=f"🔍 Đang phân tích lỗi và gọi AI Engine sửa plugin `{tool_name}`..."
                     )
                     
-                    # SAFEGUARD: Do NOT overwrite existing plugins directly.
-                    # Instead, generate a proposed fix and save as _proposed_fix.py
-                    plugin_dir = os.path.join(PROJECT_ROOT, "plugins")
-                    existing_plugin_path = os.path.join(plugin_dir, f"{tool_name}.py")
-                    proposed_path = os.path.join(plugin_dir, f"{tool_name}_proposed_fix.py")
-                    
-                    if os.path.exists(existing_plugin_path):
-                        # Backup the real file is safe, generate fix as "proposed"
-                        bridge_logger.info(f"Plugin exists. Generating proposed fix only (not overwriting).")
+                    # Đọc code cũ nếu có
+                    original_code = ""
+                    if os.path.exists(plugin_path):
                         try:
-                            temp_name = f"{tool_name}__fix_proposal"
-                            tool_generator.create_tool(temp_name, prompt)
-                            # Rename the generated file to proposed fix
-                            generated = os.path.join(plugin_dir, f"{temp_name}.py")
-                            if os.path.exists(generated):
-                                import shutil
-                                shutil.move(generated, proposed_path)
-                                bridge_logger.info(f"Saved proposed fix at: {proposed_path}")
-                        except Exception as proposal_err:
-                            bridge_logger.warning(f"Could not generate proposed fix: {proposal_err}")
-                    else:
-                        # Plugin does not exist yet, safe to create
-                        tool_generator.create_tool(tool_name, prompt)
+                            with open(plugin_path, "r", encoding="utf-8") as f:
+                                original_code = f.read()
+                        except Exception as read_err:
+                            bridge_logger.warning(f"Could not read original code: {read_err}")
                     
+                    # Construct prompt for LLM
+                    prompt = f"""
+You are Antigravity, an expert AI developer agent.
+You are tasked with fixing a bug in the Python plugin '{tool_name}.py'.
+
+Here is the original source code of the plugin:
+```python
+{original_code}
+```
+
+Here is the error traceback and log details:
+{error_trace}
+
+Please analyze the error and output the entire corrected python code.
+Your output must contain only the valid python code inside a single ```python ``` code block. Do not write any other explanation or text outside the code block.
+"""
+                    
+                    llm_response = generate_code_via_llm(prompt)
+                    if not llm_response:
+                        raise Exception("LLM returned empty response or API call failed.")
+                        
+                    fixed_code = extract_python_code(llm_response)
+                    if not fixed_code:
+                        raise Exception("Failed to extract python code from LLM response.")
+                    
+                    # Backup the original file
+                    if os.path.exists(plugin_path):
+                        backup_path = plugin_path + ".bak"
+                        try:
+                            import shutil
+                            shutil.copy2(plugin_path, backup_path)
+                            bridge_logger.info(f"Created backup of {tool_name}.py at {backup_path}")
+                        except Exception as backup_err:
+                            bridge_logger.warning(f"Failed to create backup: {backup_err}")
+                            
+                    # Overwrite the original plugin file
+                    os.makedirs(plugin_dir, exist_ok=True)
+                    with open(plugin_path, "w", encoding="utf-8") as f:
+                        f.write(fixed_code)
+                    bridge_logger.info(f"Successfully fixed and updated plugin: {plugin_path}")
+                    
+                    # Save a copy as proposed fix just in case the UI panel monitors it
+                    proposed_path = os.path.join(plugin_dir, f"{tool_name}_proposed_fix.py")
+                    try:
+                        with open(proposed_path, "w", encoding="utf-8") as f:
+                            f.write(fixed_code)
+                    except:
+                        pass
+
                     # Log kết quả sau khi sửa
                     self._write_selfrepair_log(
                         role="ai",
                         plugin=tool_name,
-                        message=f"✅ Đã phân tích lỗi và tạo lại code cho plugin `{tool_name}`. Vui lòng kiểm tra và khởi động lại tác vụ."
+                        message=f"✅ Đã sửa thành công lỗi của plugin `{tool_name}`. Đã cập nhật file trực tiếp."
                     )
                 else:
                     self._write_selfrepair_log(
@@ -169,13 +265,40 @@ class AntigravityHandler(FileSystemEventHandler):
                         plugin=tool_name,
                         message=f"🛠️ Đang tạo mới plugin `{tool_name}` theo yêu cầu: {requirement}"
                     )
-                    tool_generator.create_tool(tool_name, requirement)
+                    
+                    # Construct prompt for LLM to generate tool from scratch
+                    prompt = f"""
+You are Antigravity, an expert AI developer agent.
+You are tasked with generating a Python plugin '{tool_name}.py' based on the following requirement:
+{requirement}
+
+Requirements for the plugin:
+- It must have a `Plugin` class or a top-level `run` function.
+- If it uses a `Plugin` class, it must have an `__init__(self)` initializing `self.name` and `self.description` and a `run(self, **kwargs)` method returning a dict with "status": "success"/"error".
+- Ensure clean code, appropriate logging (using core.logger.get_module_logger), and error handling.
+- Output the entire python code inside a single ```python ``` code block. Do not write any other explanation or text outside the code block.
+"""
+                    llm_response = generate_code_via_llm(prompt)
+                    if not llm_response:
+                        raise Exception("LLM returned empty response or API call failed.")
+                        
+                    generated_code = extract_python_code(llm_response)
+                    if not generated_code:
+                        raise Exception("Failed to extract python code from LLM response.")
+                        
+                    os.makedirs(plugin_dir, exist_ok=True)
+                    with open(plugin_path, "w", encoding="utf-8") as f:
+                        f.write(generated_code)
+                    bridge_logger.info(f"Successfully generated new plugin: {plugin_path}")
+                    
                     self._write_selfrepair_log(
                         role="ai",
                         plugin=tool_name,
                         message=f"✅ Đã tạo thành công plugin `{tool_name}`."
                     )
                     
+                # Update registry
+                tool_generator._update_registry(tool_name)
                 return {
                     "task_id": data.get("id"),
                     "status": "done",

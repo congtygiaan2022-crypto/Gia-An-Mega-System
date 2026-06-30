@@ -25,8 +25,8 @@ class MainWindow(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        selftitle("Gams Tool Auto Bcgame v1.0.0")
-        self.geometry("1150x800")
+        self.title("Gams Tool Auto Bcgame v1.0.1")
+        self.geometry("1300x850")
         
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -60,20 +60,20 @@ class MainWindow(ctk.CTk):
         self.grid_rowconfigure(1, weight=1)
         
         # --- HEADER (Settings & Controls - HORIZONTAL) ---
-        self.header = ctk.CTkFrame(self, corner_radius=0, height=160)
+        self.header = ctk.CTkFrame(self, corner_radius=0, height=260)
         self.header.grid(row=0, column=0, sticky="ew")
         
         # Sub-frame 1: Login Info
         self.frm_login = ctk.CTkFrame(self.header, fg_color="transparent")
         self.frm_login.grid(row=0, column=0, padx=10, pady=10, sticky="n")
         ctk.CTkLabel(self.frm_login, text="ĐĂNG NHẬP", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w")
-        self.ent_phone = ctk.CTkEntry(self.frm_login, placeholder_text="Số điện thoại", width=140)
+        self.ent_phone = ctk.CTkEntry(self.frm_login, placeholder_text="Số điện thoại", width=200, height=32)
         self.ent_phone.insert(0, self.config.get("login", {}).get("phone", ""))
         self.ent_phone.pack(pady=2)
-        self.ent_pass = ctk.CTkEntry(self.frm_login, placeholder_text="Mật khẩu", show="*", width=140)
+        self.ent_pass = ctk.CTkEntry(self.frm_login, placeholder_text="Mật khẩu", show="*", width=200, height=32)
         self.ent_pass.insert(0, self.config.get("login", {}).get("password", ""))
         self.ent_pass.pack(pady=2)
-        self.ent_2fa = ctk.CTkEntry(self.frm_login, placeholder_text="2FA Key", width=140)
+        self.ent_2fa = ctk.CTkEntry(self.frm_login, placeholder_text="2FA Key", width=200, height=32)
         self.ent_2fa.insert(0, self.config.get("login", {}).get("2fa_key", ""))
         self.ent_2fa.pack(pady=2)
         
@@ -81,13 +81,13 @@ class MainWindow(ctk.CTk):
         self.frm_sys = ctk.CTkFrame(self.header, fg_color="transparent")
         self.frm_sys.grid(row=0, column=1, padx=10, pady=10, sticky="n")
         ctk.CTkLabel(self.frm_sys, text="HỆ THỐNG", font=ctk.CTkFont(size=12, weight="bold")).pack(anchor="w")
-        self.ent_proxy = ctk.CTkEntry(self.frm_sys, placeholder_text="Proxy (ip:port:u:p)", width=180)
+        self.ent_proxy = ctk.CTkEntry(self.frm_sys, placeholder_text="Proxy (ip:port:u:p)", width=300, height=32)
         self.ent_proxy.insert(0, self.config.get("ui", {}).get("proxy", ""))
         self.ent_proxy.pack(pady=2)
-        self.ent_sheet = ctk.CTkEntry(self.frm_sys, placeholder_text="URL Google Sheet", width=180)
+        self.ent_sheet = ctk.CTkEntry(self.frm_sys, placeholder_text="URL Google Sheet", width=420, height=32)
         self.ent_sheet.insert(0, self.config.get("ui", {}).get("sheet_url", ""))
         self.ent_sheet.pack(pady=2)
-        self.ent_api_key = ctk.CTkEntry(self.frm_sys, placeholder_text="API-Football Key", show="*", width=180)
+        self.ent_api_key = ctk.CTkEntry(self.frm_sys, placeholder_text="API-Football Key", show="*", width=300, height=32)
         self.ent_api_key.insert(0, self.config.get("api", {}).get("football_api_key", ""))
         self.ent_api_key.pack(pady=2)
         
@@ -146,7 +146,31 @@ class MainWindow(ctk.CTk):
         self.log_panel.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Setup 2. Theo Dõi Tab
-        self.lbl_care_info = ctk.CTkLabel(self.tab_care, text="DANH SÁCH TRẬN ĐANG THEO DÕI (GOOGLE SEARCH)", font=ctk.CTkFont(size=14, weight="bold"))
+        self.frm_manual_care = ctk.CTkFrame(self.tab_care, fg_color="transparent")
+        self.frm_manual_care.pack(fill="x", padx=20, pady=(10, 5))
+        
+        # Grid inside frm_manual_care
+        self.frm_manual_care.grid_columnconfigure(7, weight=1)
+        
+        ctk.CTkLabel(self.frm_manual_care, text="Trận thủ công:", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=0, padx=5, pady=5, sticky="w")
+        self.ent_care_match = ctk.CTkEntry(self.frm_manual_care, placeholder_text="Arsenal vs Bayern", width=280, height=32)
+        self.ent_care_match.grid(row=0, column=1, padx=5, pady=5, sticky="w")
+        
+        ctk.CTkLabel(self.frm_manual_care, text="Tiền cược:", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=2, padx=5, pady=5, sticky="w")
+        self.ent_care_stake = ctk.CTkEntry(self.frm_manual_care, placeholder_text="1000", width=100, height=32)
+        self.ent_care_stake.grid(row=0, column=3, padx=5, pady=5, sticky="w")
+        
+        ctk.CTkLabel(self.frm_manual_care, text="Tỉ lệ:", font=ctk.CTkFont(size=12, weight="bold")).grid(row=0, column=4, padx=5, pady=5, sticky="w")
+        self.ent_care_odds = ctk.CTkEntry(self.frm_manual_care, placeholder_text="1.15", width=100, height=32)
+        self.ent_care_odds.grid(row=0, column=5, padx=5, pady=5, sticky="w")
+        
+        self.btn_start_manual_care = ctk.CTkButton(self.frm_manual_care, text="CARE THỦ CÔNG", font=ctk.CTkFont(weight="bold"), fg_color="#ffc107", text_color="black", width=120, command=self._start_manual_care, height=32)
+        self.btn_start_manual_care.grid(row=0, column=6, padx=5, pady=5, sticky="w")
+        
+        self.btn_stop_manual_care = ctk.CTkButton(self.frm_manual_care, text="DỪNG CARE TC", font=ctk.CTkFont(weight="bold"), fg_color="#dc3545", width=120, command=self._stop_manual_care, state="disabled", height=32)
+        self.btn_stop_manual_care.grid(row=0, column=7, padx=5, pady=5, sticky="w")
+
+        self.lbl_care_info = ctk.CTkLabel(self.tab_care, text="DANH SÁCH TRẬN ĐANG THEO DÕI (FLASHSCORE / GOOGLE)", font=ctk.CTkFont(size=14, weight="bold"))
         self.lbl_care_info.pack(pady=10)
         self.care_list = ctk.CTkTextbox(self.tab_care, height=300)
         self.care_list.pack(fill="both", expand=True, padx=20, pady=10)
@@ -188,6 +212,16 @@ class MainWindow(ctk.CTk):
 
     def _log(self, message, level="INFO"):
         self.after(0, lambda m=message, l=level: self.log_panel.add_log(m, l))
+
+    def _save_bet_history_log(self, message: str):
+        try:
+            log_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "bet_history.log")
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            with open(log_path, "a", encoding="utf-8") as f:
+                f.write(f"[{timestamp}] {message}\n")
+        except Exception as e:
+            logger.error(f"Lỗi ghi bet_history.log: {e}")
 
     def _start_login(self):
         """Kích hoạt luồng đăng nhập"""
@@ -300,8 +334,9 @@ class MainWindow(ctk.CTk):
     def _run_auto_bet(self):
         self._log("🚀 Đã khởi động AUTO ĐẶT CƯỢC", "INFO")
         try:
-            if not getattr(self, 'browser', None):
-                self._log("⚠️ Trình duyệt chưa mở. Vui lòng bấm 1. ĐĂNG NHẬP trước.", "ERROR")
+            if not getattr(self, 'browser', None) or not self.browser.check_alive():
+                self.browser = None
+                self._log("⚠️ Trình duyệt chưa mở hoặc đã bị đóng. Vui lòng bấm 1. ĐĂNG NHẬP trước.", "ERROR")
                 return
 
             self.scraper_bc = BCGameScraper(self.browser, log_callback=self._log)
@@ -309,8 +344,14 @@ class MainWindow(ctk.CTk):
             self.selector = MatchSelector()
             self.bettor = BettingEngine(self.browser, self.scraper_bc, self.config, log_callback=self._log, stats_callback=self.stats_panel.update_stats)
             self.reporter = GoogleSheetsReporter(spreadsheet_url=self.ent_sheet.get())
+            from core.auditor import CombinedAuditor
+            self.auditor = CombinedAuditor(self.browser)
             
             while self.is_running:
+                if not self.browser or not self.browser.check_alive():
+                    self.browser = None
+                    self._log("❌ Trình duyệt đã bị đóng bất ngờ. Dừng tiến trình.", "ERROR")
+                    break
                 # Lấy cài đặt hiện tại từ UI
                 settings = self.bet_panel.get_settings()
                 sel_config = settings.get("selection", {})
@@ -343,7 +384,10 @@ class MainWindow(ctk.CTk):
                     
                 if not all_tai_matches:
                     self._log("😴 Không tìm thấy trận nào để xử lý. Nghỉ 5 phút...", "WARNING")
-                    time.sleep(300)
+                    for _ in range(300):
+                        if not self.is_running:
+                            break
+                        time.sleep(1)
                     continue
                 
                 excluded_matches = []
@@ -369,10 +413,17 @@ class MainWindow(ctk.CTk):
                         excluded_matches.append(selected_match['raw_line'])
                         continue
                     
+                    if not self.is_running:
+                        break
+                        
                     self._log(f"🎲 Trận {selected_match['home']} hợp lệ (Chưa đá). Tiến hành tìm trên BCGame...")
 
                     # BƯỚC 2: Tìm trên BCGame
-                    bc_matches = self.scraper_bc.search_match(selected_match['home'], selected_match['away'])
+                    bc_matches = self.scraper_bc.search_match(
+                        selected_match['home'], 
+                        selected_match['away'],
+                        is_running_cb=lambda: self.is_running
+                    )
                     
                     # Debug: in ra tên đội BCGame để so sánh
                     if bc_matches:
@@ -471,7 +522,7 @@ class MainWindow(ctk.CTk):
 
                     
                     if record:
-                        self._log("🚀 Cược thành công! Hãy bật AUTO CARE KẾT QUẢ.", "SUCCESS")
+                        self._log("🚀 Cược thành công! Đang tự động chuyển sang theo dõi kết quả...", "SUCCESS")
                         self.after(0, lambda: self.tabview.set("2. THEO DÕI KẾT QUẢ"))
                         
                         report_data = {
@@ -481,24 +532,111 @@ class MainWindow(ctk.CTk):
                             'odds': best_odd['odds']
                         }
                         self.reporter.add_bet_report(report_data)
-                        _msg = f"[{datetime.now().strftime('%H:%M')}] Đã ghi báo cáo PENDING cho {report_data['match']}\n"
+                        _msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] Đã ghi báo cáo PENDING cho {report_data['match']}\n"
                         self.after(0, lambda m=_msg: self.report_list.insert("end", m))
+                        self._save_bet_history_log(f"ĐÃ CƯỢC: {report_data['match']} | Vốn: {balance} | Cược: {bet_amount} | Odds: {best_odd['odds']}")
 
                         self.pending_match = best_match
                         self.pending_report = report_data
                         self.pending_odd = best_odd
                         self.pending_balance = balance
                         self.pending_bet_amount = bet_amount
+                        self.pending_won = None
                         bet_placed = True
-                        break
+
+                        # --- CARE PHASE IN-THREAD ---
+                        _care_msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] Đang theo dõi: {report_data['match']}\n"
+                        self.after(0, lambda m=_care_msg: self.care_list.insert("end", m))
+                        self._save_bet_history_log(f"BẮT ĐẦU THEO DÕI: {report_data['match']}")
+
+                        won = None
+                        while self.is_running:
+                            if not self.browser or not self.browser.check_alive():
+                                self.browser = None
+                                self._log("❌ Trình duyệt đã bị đóng bất ngờ. Dừng tiến trình.", "ERROR")
+                                break
+                            
+                            status, h_score, a_score = self.auditor.check_result(best_match.home_team, best_match.away_team)
+                            _live_txt = f"LIVE: {best_match.home_team} {h_score}-{a_score} {best_match.away_team}"
+                            self.after(0, lambda t=_live_txt: self.lbl_care_info.configure(text=t))
+
+                            if (h_score + a_score) > 0:
+                                won = True
+                                self._log(f"🎉 CÓ BÀN THẮNG! {h_score}-{a_score}. THẮNG CƯỢC!", "SUCCESS")
+                                self._save_bet_history_log(f"KẾT QUẢ TRẬN: {report_data['match']} -> THẮNG ({h_score}-{a_score})")
+                                break
+                            elif status == "FIN":
+                                won = False
+                                self._log("🏁 Kết thúc 0-0. THUA CƯỢC.", "ERROR")
+                                self._save_bet_history_log(f"KẾT QUẢ TRẬN: {report_data['match']} -> THUA (0-0)")
+                                break
+
+                            self._log("⏳ Chưa có kết quả, chờ 5 phút check lại...", "INFO")
+                            # Poll every 5 minutes (300 seconds), check self.is_running every 1s
+                            for _ in range(300):
+                                if not self.is_running:
+                                    break
+                                time.sleep(1)
+                            
+                        if not self.is_running:
+                            break
+
+                        if won is not None:
+                            self.pending_won = won
+                            self.after(0, lambda: self.tabview.set("3. BÁO CÁO"))
+                            
+                            # --- REPORT PHASE IN-THREAD ---
+                            self._log("📝 Đang tự động ghi nhận báo cáo hoàn tất...", "INFO")
+                            self.reporter.finalize_report(report_data['match'], won, best_odd['odds'], bet_amount)
+                            res_str = "THẮNG" if won else "THUA"
+                            _rep_msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] HOÀN TẤT: {report_data['match']} -> {res_str}\n"
+                            self.after(0, lambda m=_rep_msg: self.report_list.insert("end", m))
+
+                            new_balance = (balance - bet_amount) + bet_amount * best_odd['odds'] if won else balance - bet_amount
+                            self.after(0, lambda b=new_balance: self.stats_panel.update_stats({"balance": b}))
+                            self._save_bet_history_log(f"BÁO CÁO HOÀN TẤT: {report_data['match']} -> {res_str} | Vốn cũ: {balance} | Tiền cược: {bet_amount} | Odds: {best_odd['odds']} | Số dư mới: {new_balance}")
+
+                            # Dọn dẹp state
+                            self.pending_match = None
+                            self.pending_report = None
+                            self.pending_odd = None
+                            self.pending_balance = None
+                            self.pending_won = None
+                            self.pending_bet_amount = None
+
+                            if not won and bet_cfg.get("mode") != "fixed":
+                                self._log("💀 Cháy tài khoản All-in. Dừng tool.", "ERROR")
+                                self.is_running = False
+                                break
+                            
+                            if new_balance < 1000:
+                                self._log(f"❌ Số dư {new_balance} quá thấp để tiếp tục đặt cược. Dừng tool.", "ERROR")
+                                self.is_running = False
+                                break
+                            
+                            self._log("✅ Hoàn tất vòng cược! Chuẩn bị quét trận mới sau 60 giây...", "SUCCESS")
+                            break
+                        else:
+                            # if won is None but loop exited, it means browser died or is_running was turned off
+                            break
                     else:
                         excluded_matches.append(selected_match['raw_line'])
                 
                 if bet_placed:
-                    break
+                    # Chờ 60 giây trước khi quét trận mới
+                    self._log("⏳ Vòng cược hoàn tất. Chờ 60s trước khi quét vòng cược mới...", "INFO")
+                    for _ in range(60):
+                        if not self.is_running:
+                            break
+                        time.sleep(1)
                 else:
+                    if not self.is_running:
+                        break
                     self._log("⏳ Chưa tìm được kèo ngon, nghỉ 60s quét lại...", "INFO")
-                    time.sleep(60)
+                    for _ in range(60):
+                        if not self.is_running:
+                            break
+                        time.sleep(1)
                 
         except Exception as e:
             self._log(f"💥 Lỗi Auto Đặt Cược: {str(e)}", "ERROR")
@@ -509,8 +647,9 @@ class MainWindow(ctk.CTk):
     def _run_auto_care(self):
         self._log("🔍 Đã khởi động AUTO CARE KẾT QUẢ", "INFO")
         try:
-            if not getattr(self, 'browser', None):
-                self._log("⚠️ Trình duyệt chưa mở.", "ERROR")
+            if not getattr(self, 'browser', None) or not self.browser.check_alive():
+                self.browser = None
+                self._log("⚠️ Trình duyệt chưa mở hoặc đã bị đóng.", "ERROR")
                 return
 
             if not getattr(self, 'pending_match', None):
@@ -526,10 +665,15 @@ class MainWindow(ctk.CTk):
             best_match = self.pending_match
             report_data = self.pending_report
             
-            _care_msg = f"[{datetime.now().strftime('%H:%M')}] Đang theo dõi: {report_data['match']}\n"
+            _care_msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] Đang theo dõi: {report_data['match']}\n"
             self.after(0, lambda m=_care_msg: self.care_list.insert("end", m))
+            self._save_bet_history_log(f"BẮT ĐẦU THEO DÕI: {report_data['match']}")
 
             while self.is_running:
+                if not self.browser or not self.browser.check_alive():
+                    self.browser = None
+                    self._log("❌ Trình duyệt đã bị đóng bất ngờ. Dừng tiến trình.", "ERROR")
+                    break
                 status, h_score, a_score = self.auditor.check_result(best_match.home_team, best_match.away_team)
                 _live_txt = f"LIVE: {best_match.home_team} {h_score}-{a_score} {best_match.away_team}"
                 self.after(0, lambda t=_live_txt: self.lbl_care_info.configure(text=t))
@@ -538,9 +682,11 @@ class MainWindow(ctk.CTk):
                 if (h_score + a_score) > 0:
                     won = True
                     self._log(f"🎉 CÓ BÀN THẮNG! {h_score}-{a_score}. THẮNG CƯỢC!", "SUCCESS")
+                    self._save_bet_history_log(f"KẾT QUẢ TRẬN: {report_data['match']} -> THẮNG ({h_score}-{a_score})")
                 elif status == "FIN":
                     won = False
                     self._log("🏁 Kết thúc 0-0. THUA CƯỢC.", "ERROR")
+                    self._save_bet_history_log(f"KẾT QUẢ TRẬN: {report_data['match']} -> THUA (0-0)")
 
                 if won is not None:
                     self.pending_won = won
@@ -579,12 +725,13 @@ class MainWindow(ctk.CTk):
 
             self.reporter.finalize_report(report_data['match'], won, best_odd['odds'], bet_amount)
             res_str = "THẮNG" if won else "THUA"
-            _rep_msg = f"[{datetime.now().strftime('%H:%M')}] HOÀN TẤT: {report_data['match']} -> {res_str}\n"
+            _rep_msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] HOÀN TẤT: {report_data['match']} -> {res_str}\n"
             self.after(0, lambda m=_rep_msg: self.report_list.insert("end", m))
 
             new_balance = (balance - bet_amount) + bet_amount * best_odd['odds'] if won else balance - bet_amount
             _nb = new_balance
             self.after(0, lambda b=_nb: self.stats_panel.update_stats({"balance": b}))
+            self._save_bet_history_log(f"BÁO CÁO HOÀN TẤT: {report_data['match']} -> {res_str} | Vốn cũ: {balance} | Tiền cược: {bet_amount} | Odds: {best_odd['odds']} | Số dư mới: {new_balance}")
 
             self.pending_match = None
             self.pending_report = None
@@ -601,136 +748,177 @@ class MainWindow(ctk.CTk):
             self.is_running = False
             self.after(0, self._stop_execution)
 
-    def _run_loop(self):
-        """Thuật toán chính: Wap -> Random Choice -> BCGame All-in -> Auditor"""
+    def _start_manual_care(self):
+        if self.is_running:
+            self._log("⚠️ Đang có tiến trình chạy. Bấm DỪNG trước.", "WARNING")
+            return
+        
+        match_name = self.ent_care_match.get().strip()
+        if not match_name:
+            self._log("⚠️ Vui lòng nhập tên trận đấu!", "WARNING")
+            return
+            
         try:
-            # Khởi tạo các Modules cần thiết (không cần init Browser/Session nữa)
-            sheet_url = self.ent_sheet.get()
+            stake_str = self.ent_care_stake.get().strip()
+            odds_str = self.ent_care_odds.get().strip()
             
-            self.scraper_bc = BCGameScraper(self.browser, log_callback=self._log)
-            self.scraper_wap = WapScraper(browser=self.browser, log_callback=self._log)
-            self.selector = MatchSelector()
-            self.bettor = BettingEngine(self.browser, self.scraper_bc, self.config, log_callback=self._log, stats_callback=self.stats_panel.update_stats)
-            self.reporter = GoogleSheetsReporter(spreadsheet_url=sheet_url)
-            from core.auditor import CombinedAuditor
-            self.auditor = CombinedAuditor(self.browser)
+            # Tự động dùng mặc định nếu để trống
+            if not stake_str:
+                bet_cfg = self.config.get("betting", {})
+                fixed_amount = float(bet_cfg.get("fixed_amount", 0))
+                stake = fixed_amount if fixed_amount > 0 else 1000.0
+                self._log(f"ℹ️ Tiền cược để trống, dùng mặc định: {stake}")
+            else:
+                stake = float(stake_str)
+                
+            if not odds_str:
+                odds = 1.15
+                self._log(f"ℹ️ Tỉ lệ cược để trống, dùng mặc định: {odds}")
+            else:
+                odds = float(odds_str)
+                
+            if stake <= 0 or odds <= 0:
+                raise ValueError("Phải lớn hơn 0")
+        except ValueError:
+            self._log("⚠️ Tiền cược và Tỷ lệ cược phải là số dương hợp lệ!", "WARNING")
+            return
+            
+        self.is_running = True
+        self.btn_start_manual_care.configure(text="ĐANG CARE...", state="disabled", fg_color="#555")
+        self.btn_stop_manual_care.configure(state="normal")
+        if hasattr(self, 'btn_stop'):
+            self.btn_stop.configure(state="normal")
+        
+        threading.Thread(target=self._run_manual_care, args=(match_name, stake, odds), daemon=True).start()
 
+    def _stop_manual_care(self):
+        self.is_running = False
+        self._log("🛑 Đã gửi lệnh dừng Care thủ công...", "WARNING")
+        self.btn_start_manual_care.configure(text="CARE THỦ CÔNG", state="normal", fg_color="#ffc107")
+        self.btn_stop_manual_care.configure(state="disabled")
+        if hasattr(self, 'btn_stop'):
+            self.btn_stop.configure(state="disabled")
+
+    def _run_manual_care(self, match_name, stake, odds):
+        self._log(f"🔍 Đã khởi động CARE THỦ CÔNG cho trận '{match_name}'", "INFO")
+        try:
+            if not getattr(self, 'browser', None) or not self.browser.check_alive():
+                self.browser = None
+                self._log("🌐 Đang khởi động trình duyệt Chrome để check FlashScore...", "INFO")
+                from core.browser import BrowserController
+                proxy = self.ent_proxy.get().strip()
+                self.browser = BrowserController(proxy=proxy if proxy else None, log_callback=self._log)
+                if not self.browser.start():
+                    self._log("❌ Không thể khởi động trình duyệt!", "ERROR")
+                    return
             
-            while self.is_running:
-                # BƯỚC 1: Quét Wap.vn lấy danh sách TÀI
-                all_tai_matches = self.scraper_wap.get_tai_matches()
-                if not all_tai_matches:
-                    self._log("😴 Không tìm thấy trận TÀI nào. Nghỉ 10 phút...", "WARNING")
-                    time.sleep(600)
-                    continue
-                
-                excluded_matches = []
-                
-                while self.is_running:
-                    available = [m for m in all_tai_matches if m['raw_line'] not in excluded_matches]
-                    if not available: break
-                    
-                    selected_match = random.choice(available)
-                    self._log(f"🎲 Chọn trận: {selected_match['home']} vs {selected_match['away']}")
-                    _t = f"TRẬN CHỌN: {selected_match['home']} vs {selected_match['away']}"
-                    self.after(0, lambda t=_t: self.lbl_match_info.configure(text=t))
-                    
-                    # Tìm trên BCGame
-                    bc_matches = self.scraper_bc.search_match(selected_match['home'], selected_match['away'])
-                    best_match = next((b for b in bc_matches if self.selector.is_match_similar(selected_match['home'], selected_match['away'], b.home_team, b.away_team)), None)
-                    
-                    if not best_match:
-                        excluded_matches.append(selected_match['raw_line'])
-                        continue
-                    
-                    # Lấy kèo Tài 0.5
-                    over_odds = self.scraper_bc.get_over_odds(best_match)
-                    best_odd = next((o for o in over_odds if "0.5" in o['market']), None)
-                    
-                    if not best_odd:
-                        self._log("⚠️ Không có kèo Tài 0.5. Bỏ qua.", "WARNING")
-                        excluded_matches.append(selected_match['raw_line'])
-                        self._save_skipped_match(selected_match)
-                        continue
-                    
-                    # Đặt cược All-in
+            # Phân tách tên đội
+            if " vs " in match_name.lower():
+                parts = re.split(r" vs ", match_name, flags=re.IGNORECASE)
+                home, away = parts[0].strip(), parts[1].strip()
+            elif " - " in match_name:
+                parts = match_name.split(" - ")
+                home, away = parts[0].strip(), parts[1].strip()
+            elif "-" in match_name:
+                parts = match_name.split("-")
+                home, away = parts[0].strip(), parts[1].strip()
+            else:
+                home, away = match_name.strip(), ""
+
+            self.reporter = GoogleSheetsReporter(spreadsheet_url=self.ent_sheet.get().strip())
+            
+            # Lấy số dư hiện tại từ stats panel hoặc session
+            balance = 0.0
+            if getattr(self, 'session', None) and self.session.is_logged_in:
+                try:
                     balance = self.session.get_balance()
-                    if balance < 1000: # Ngưỡng tối thiểu VND (giả định)
-                        self._log(f"❌ Số dư {balance} quá thấp để All-in. Dừng.", "ERROR")
-                        self.is_running = False
-                        break
-                    
-                    self._log(f"💰 ALL-IN {balance} VND vào {best_odd['market']} @ {best_odd['odds']}")
-                    if not best_odd.get('_js_click_done') and best_odd.get('element'):
-                        self.browser.click_element(best_odd['element'])
-                    time.sleep(1)
-                    
-                    record = self.bettor.place_bet(best_match, "over", balance, "All-in Over 0.5")
-                    
-                    if record:
-                        self._log("🚀 Cược thành công! Chuyển sang Tab THEO DÕI.", "SUCCESS")
-                        self.after(0, lambda: self.tabview.set("2. THEO DÕI KẾT QUẢ"))
-
-                        # Báo cáo bước đầu
-                        report_data = {
-                            'match': f"{best_match.home_team} vs {best_match.away_team}",
-                            'capital': balance,
-                            'stake': balance,
-                            'odds': best_odd['odds']
-                        }
-                        self.reporter.add_bet_report(report_data)
-                        _m1 = f"[{datetime.now().strftime('%H:%M')}] Đã ghi báo cáo PENDING cho {report_data['match']}\n"
-                        self.after(0, lambda m=_m1: self.report_list.insert("end", m))
-
-                        # BƯỚC 6: Care kết quả (Google Search)
-                        won = False
-                        _m2 = f"[{datetime.now().strftime('%H:%M')}] Đang theo dõi: {report_data['match']}\n"
-                        self.after(0, lambda m=_m2: self.care_list.insert("end", m))
-                        
-                        while self.is_running:
-                            time.sleep(300) # Check mỗi 5 phút
-                            status, h_score, a_score = self.auditor.check_result(best_match.home_team, best_match.away_team)
-                            _lt = f"LIVE: {best_match.home_team} {h_score}-{a_score} {best_match.away_team}"
-                            self.after(0, lambda t=_lt: self.lbl_care_info.configure(text=t))
-
-                            if (h_score + a_score) > 0:
-                                won = True
-                                self._log(f"🎉 CÓ BÀN THẮNG! {h_score}-{a_score}. THẮNG CƯỢC!", "SUCCESS")
-                                break
-
-                            if status == "FIN":
-                                won = False
-                                self._log("🏁 Kết thúc 0-0. THUA CƯỢC.", "ERROR")
-                                break
-
-                        # BƯỚC 7: Làm báo cáo hoàn tất
-                        self.after(0, lambda: self.tabview.set("3. BÁO CÁO"))
-                        self.reporter.finalize_report(report_data['match'], won, best_odd['odds'], balance)
-                        res_str = "THẮNG" if won else "THUA"
-                        _rm = f"[{datetime.now().strftime('%H:%M')}] HOÀN TẤT: {report_data['match']} -> {res_str}\n"
-                        self.after(0, lambda m=_rm: self.report_list.insert("end", m))
-
-                        # Cập nhật số dư mới sau thắng/thua
-                        new_balance = balance * best_odd['odds'] if won else 0
-                        self.after(0, lambda b=new_balance: self.stats_panel.update_stats({"balance": b}))
-                        
-                        if not won:
-                            self._log("💀 Cháy tài khoản All-in. Dừng tool.", "ERROR")
-                            self.is_running = False
-                            break
-                        
-                        break # Tìm trận mới cho vòng cược tiếp theo
-                    else:
-                        excluded_matches.append(selected_match['raw_line'])
+                except Exception:
+                    pass
+            if balance <= 0:
+                try:
+                    balance_str = self.stats_panel.card_balance.lbl_value.cget("text")
+                    balance = float(re.sub(r'[^\d\.]', '', balance_str))
+                except Exception:
+                    balance = 0.0
+            
+            report_data = {
+                'match': match_name,
+                'capital': balance,
+                'stake': stake,
+                'odds': odds
+            }
+            
+            self._log(f"📝 Đang ghi báo cáo PENDING lên Google Sheets cho {match_name}...")
+            self.reporter.add_bet_report(report_data)
+            _msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] Đã ghi báo cáo PENDING cho {report_data['match']}\n"
+            self.after(0, lambda m=_msg: self.report_list.insert("end", m))
+            self._save_bet_history_log(f"BẮT ĐẦU THEO DÕI THỦ CÔNG: {match_name} | Vốn: {balance} | Tiền cược: {stake} | Odds: {odds}")
+            
+            from core.auditor import FlashScoreAuditor
+            self.auditor = FlashScoreAuditor(self.browser)
+            
+            _care_msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] Đang theo dõi (FlashScore): {match_name}\n"
+            self.after(0, lambda m=_care_msg: self.care_list.insert("end", m))
+            
+            won = None
+            while self.is_running:
+                if not self.browser or not self.browser.check_alive():
+                    self.browser = None
+                    self._log("❌ Trình duyệt đã bị đóng bất ngờ. Dừng tiến trình.", "ERROR")
+                    break
                 
-                time.sleep(60) # Nghỉ trước khi quét Wap.vn vòng mới
+                self._log(f"🕵️ Đang check trực tiếp kết quả tại FlashScore.vn cho: {home} vs {away}...", "INFO")
+                status, h_score, a_score = self.auditor.check_result(home, away)
+                
+                if status == "NOT_FOUND":
+                    _live_txt = f"FLASH: Không tìm thấy trận {match_name}"
+                elif status == "ERROR":
+                    _live_txt = f"FLASH: Lỗi kết nối check {match_name}"
+                else:
+                    _live_txt = f"FLASH: {home} {h_score}-{a_score} {away} ({status})"
+                
+                self.after(0, lambda t=_live_txt: self.lbl_care_info.configure(text=t))
+                
+                if status not in ["ERROR", "NOT_FOUND"]:
+                    if (h_score + a_score) > 0:
+                        won = True
+                        self._log(f"🎉 CÓ BÀN THẮNG! {h_score}-{a_score}. THẮNG CƯỢC!", "SUCCESS")
+                        self._save_bet_history_log(f"KẾT QUẢ TRẬN (THỦ CÔNG): {match_name} -> THẮNG ({h_score}-{a_score})")
+                        break
+                    elif status == "FIN":
+                        won = False
+                        self._log("🏁 Kết thúc 0-0. THUA CƯỢC.", "ERROR")
+                        self._save_bet_history_log(f"KẾT QUẢ TRẬN (THỦ CÔNG): {match_name} -> THUA (0-0)")
+                        break
+                
+                self._log("⏳ Chưa có bàn thắng/kết quả, chờ 3 phút check lại...", "INFO")
+                for _ in range(180):
+                    if not self.is_running:
+                        break
+                    time.sleep(1)
+            
+            if won is not None:
+                self._log("📝 Đang cập nhật báo cáo HOÀN TẤT lên Google Sheets...", "INFO")
+                self.reporter.finalize_report(match_name, won, odds, stake)
+                res_str = "THẮNG" if won else "THUA"
+                _rep_msg = f"[{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}] HOÀN TẤT TC: {match_name} -> {res_str}\n"
+                self.after(0, lambda m=_rep_msg: self.report_list.insert("end", m))
+                
+                # Cập nhật số dư
+                new_balance = (balance - stake) + stake * odds if won else balance - stake
+                self.after(0, lambda b=new_balance: self.stats_panel.update_stats({"balance": b}))
+                self._save_bet_history_log(f"BÁO CÁO HOÀN TẤT (THỦ CÔNG): {match_name} -> {res_str} | Vốn cũ: {balance} | Tiền cược: {stake} | Odds: {odds} | Số dư mới: {new_balance}")
+                self._log(f"✅ Đã hoàn tất báo cáo trận thủ công: {match_name}", "SUCCESS")
+                self.after(0, lambda: self.tabview.set("3. BÁO CÁO"))
+            else:
+                self._log("⚠️ Tiến trình Care thủ công kết thúc không có kết quả xác định.", "WARNING")
                 
         except Exception as e:
-            self._log(f"💥 Lỗi hệ thống: {str(e)}", "ERROR")
-            logger.exception(e)
+            self._log(f"💥 Lỗi Care thủ công: {str(e)}", "ERROR")
         finally:
             self.is_running = False
-            self.after(0, self._stop_execution)
+            self.after(0, self._stop_manual_care)
+
 
     def _save_skipped_match(self, match_data: dict):
         """Lưu các trận đấu bị loại bỏ vì không có kèo 0.5 vào JSON database"""

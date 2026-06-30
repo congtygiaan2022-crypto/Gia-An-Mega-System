@@ -234,3 +234,53 @@
 |------|--------|-------|-----------|
 | `core/selector.py` | HIGH | Nhận diện trận đấu và so khớp tên giữa Wap.vn (tiếng Việt) và BCGame (tiếng Anh) dễ bị lỗi hoặc bỏ sót do khác biệt ngôn ngữ, viết tắt và dấu tiếng Việt (ví dụ: "Thụy Điển" vs "Sweden", "M.U" vs "Manchester United"). | Thêm `strip_diacritics` để loại bỏ dấu tiếng Việt; tích hợp bộ từ điển `TRANSLATIONS` dịch từ tiếng Việt/viết tắt sang tiếng Anh/tên đầy đủ; sắp xếp từ khóa dịch theo độ dài giảm dần để tránh dịch đè từ ngắn trong từ dài (ví dụ: "viet nam" -> "vietnam" trước khi dịch "nam"); cập nhật `find_best_match_in_list` và `normalize_name` để sử dụng bộ chuẩn hóa này. |
 | `core/scraper.py` | HIGH | `search_match` trên BCGame chỉ dùng tên đội gốc từ Wap.vn nên không tìm thấy các đội được dịch sang tiếng Việt (như "Thụy Điển", "Ý"). | Tích hợp `normalize_name` vào `search_match`; thêm cả tên gốc tiếng Việt và tên tiếng Anh đã dịch/chuẩn hóa vào danh sách từ khóa tìm kiếm (`search_queries`) để tăng tối đa khả năng tìm thấy trận đấu trên BCGame. |
+
+---
+
+## Lần 23 — [2026-06-04 00:26]
+
+### GUI/Logic bugs
+| File | Mức độ | Mô tả | Sửa thành |
+|------|--------|-------|-----------|
+| `gui/main_window.py` dòng 28 | HIGH | Gọi hàm `selftitle(...)` không tồn tại thay vì `self.title(...)` làm Dashboard crash ngay lập tức khi khởi động với lỗi `NameError: name 'selftitle' is not defined`. | Sửa `selftitle(...)` thành `self.title(...)`. |
+
+---
+
+## Lần 24 — [2026-06-04 01:39]
+
+### Browser/Chrome bugs
+| `core/browser.py` dòng 101-122 | CRITICAL | Trình duyệt Chrome hệ thống (v148/v149) bị lỗi `SessionNotCreatedException: cannot connect to chrome` do phiên bản quá mới hoặc không tương thích với `undetected-chromedriver`. Ngoài ra, profile `chrome_profile_v2` bị ghi đè định dạng bởi Chrome v148 nên khi khởi chạy lại bằng Chrome v124 (portable) sẽ bị treo/lỗi không kết nối được. | 1. Chạy lại `download_chrome.py` để khôi phục bản Chrome portable v124.<br>2. Sửa `core/browser.py` để ưu tiên sử dụng Chrome portable (`bin/chrome/chrome.exe`) và đặt `version_main=124` khi khởi chạy driver.<br>3. Reset thư mục profile `data/chrome_profile_v2` (đổi tên cũ sang `_old`) để khởi động với profile sạch v124 tương thích hoàn toàn. |
+
+---
+
+## Lần 25 — [2026-06-04 01:42]
+
+### Browser/Session bugs
+| `core/browser.py` & `gui/main_window.py` | HIGH | Lỗi `NoSuchWindowException: target window already closed` xảy ra khi người dùng tắt thủ công cửa sổ Chrome thủ công hoặc trình duyệt bị crash bất ngờ, làm luồng tự động tiếp tục chạy lặp vô hạn gây spam log lỗi và crash code. | 1. Thêm phương thức `check_alive()` vào [browser.py](file:///e:/Gams-ToolAutoBcgame/core/browser.py#L178-L195) để phát hiện trạng thái đóng cửa sổ Chrome.<br>2. Sửa các luồng `_run_auto_bet`, `_run_auto_care`, `_run_loop` trong [main_window.py](file:///e:/Gams-ToolAutoBcgame/gui/main_window.py) để kiểm tra `check_alive()`. Nếu trình duyệt bị tắt, luồng sẽ tự dừng ngay lập tức và in thông báo rõ ràng để người dùng biết. |
+
+---
+
+## Lần 26 — [2026-06-07 23:18]
+
+### Betting Engine / UI Binding bugs
+| File | Mức độ | Mô tả | Sửa thành |
+|------|--------|-------|-----------|
+| `core/bettor.py` | HIGH | **Lỗi 1 (Không xóa cược cũ)**: Kèo của trận trước đó (odds ngoài khoảng bị bỏ qua) vẫn còn lưu lại trong phiếu cược, dẫn đến việc cược xiên lỗi ở trận tiếp theo do hàm dọn dẹp cược cũ bị dựa vào bộ lọc text `" vs "` không ổn định.<br>**Lỗi 2 (Không điền được tiền cược)**: Số tiền cược được xác định đúng nhưng không thay đổi được trên giao diện cược thực tế của BCGame do bộ chọn nhầm vào phần tử div bọc ngoài và execCommand bị chặn bởi cơ chế Binding của React/Vue. | 1. **Dọn dẹp phiếu cược**: Sửa `clear_bet_slip` của [bettor.py](file:///e:/Gams-ToolAutoBcgame/core/bettor.py#L149-L215) để quét trực tiếp nút "Xóa tất cả"/"Clear all" trong toàn bộ Shadow DOM mà không lọc text `" vs "`, đồng thời thêm cơ chế fallback tự động click từng nút close đơn lẻ của mỗi kèo.<br>2. **Điền tiền cược**: Cập nhật `_find_bet_elements()` để chỉ trả về thẻ `<input>` thực sự, đồng thời sử dụng cơ chế Native Setter kết hợp dispatch đầy đủ sự kiện `input`, `change`, và `blur` để đồng bộ hoàn toàn với React/Vue state của BCGame. |
+
+## Lần 27 — [2026-06-09 09:42]
+
+### Browser/Session bugs
+| File | Mức độ | Mô tả | Sửa thành |
+|------|--------|-------|-----------|
+| `core/scraper_wap.py` & `core/auditor.py` | HIGH | Lỗi `invalid session id` làm Chrome crash và dừng cược. Nguyên nhân do Javascript `window.open('')` không mở được tab mới, khiến driver tiếp tục thao tác trên tab cũ. Khi gọi `driver.close()`, tab duy nhất bị đóng làm Chrome tắt hoàn toàn và làm hỏng session của driver. | 1. **Kiểm tra status trận đấu**: Sửa [scraper_wap.py](file:///E:/Gams-ToolAutoBcgame/core/scraper_wap.py) để trực tiếp navigate tab hiện tại đến trang chi tiết Wap mà không cần mở tab mới (vì list trận đã được parse xong và lưu trong bộ nhớ), loại bỏ hoàn toàn các lệnh mở/đóng tab.<br>2. **Combined Auditor (FlashScore & Google)**: Cập nhật [auditor.py](file:///E:/Gams-ToolAutoBcgame/core/auditor.py) sử dụng native Selenium 4 `switch_to.new_window('tab')` để mở tab mới an toàn, đồng thời thêm kiểm tra điều kiện `len(driver.window_handles) > 1` trước khi đóng tab để không bao giờ đóng nhầm cửa sổ cuối cùng. |
+
+
+## Lần 28 — [2026-06-09 10:00]
+
+### UI Control / Concurrency & Usability bugs
+| File | Mức độ | Mô tả | Sửa thành |
+|------|--------|-------|-----------|
+| `gui/main_window.py` & `core/scraper.py` | HIGH | **Lỗi 1 (Không dừng được Auto ngay lập tức)**: Khi bấm "DỪNG AUTO", luồng chạy cược vẫn bị chặn trong các hàm sleep dài (60s/300s) và các vòng lặp tìm kiếm (`search_match`) vốn tốn thời gian, dẫn đến việc luồng cũ vẫn chạy ngầm song song với luồng mới khi người dùng bấm Start lại.<br>**Lỗi 2 (Care thủ công ném cảnh báo sai)**: Khi người dùng bấm "CARE THỦ CÔNG" nhưng để trống Tiền cược hoặc Tỉ lệ cược, hệ thống báo lỗi không hợp lệ thay vì điền giá trị mặc định. | 1. **Dừng Auto ngay lập tức**: Chia nhỏ các hàm sleep dài thành vòng lặp 1s và liên tục check `self.is_running`. Thêm tham số `is_running_cb` vào `search_match` và chèn kiểm tra `is_running` ở các vòng lặp truy vấn/cuộn trang để ngắt tìm kiếm ngay lập tức.<br>2. **Fallback mặc định cho Care thủ công**: Sửa `_start_manual_care` để tự động điền giá trị tiền cược mặc định (lấy từ cấu hình `fixed_amount` hoặc `1000`) và tỉ lệ mặc định (`1.15`) nếu người dùng để trống các ô nhập. |
+
+
+

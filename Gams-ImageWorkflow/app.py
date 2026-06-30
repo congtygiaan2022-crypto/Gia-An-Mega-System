@@ -135,6 +135,23 @@ def manual_browser(profile_name):
     )
     return jsonify({"success": True, "message": f"Đang mở trình duyệt thủ công cho {profile_name}..."})
 
+@app.route('/api/gpt_register/<profile_name>', methods=['POST'])
+def gpt_register(profile_name):
+    import subprocess
+    import sys
+    # Chặn nếu profile đang chạy auto
+    state = bot_controller_instance.profiles_state.get(profile_name)
+    if state and state.get("status") == "RUNNING":
+        return jsonify({"success": False, "message": "Profile đang chạy Auto! Vui lòng STOP Auto trước khi chạy đăng ký GPT."})
+    
+    # Mở script gpt_register.py bằng đúng môi trường ảo Python hiện tại
+    subprocess.Popen(
+        [sys.executable, "-u", "gpt_register.py", profile_name],
+        cwd=os.getcwd(),
+        creationflags=subprocess.CREATE_NEW_CONSOLE
+    )
+    return jsonify({"success": True, "message": f"Đang mở trình tạo/đổi tài khoản GPT cho {profile_name}..."})
+
 @app.route('/api/global_config', methods=['GET'])
 def get_global_cfg():
     return jsonify(db_manager.get_global_config())

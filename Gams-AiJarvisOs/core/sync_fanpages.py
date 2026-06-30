@@ -1,6 +1,20 @@
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except AttributeError:
+        try:
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+    except Exception:
+        pass
+
 import json
 import os
-import sys
 import time
 import datetime
 
@@ -41,63 +55,139 @@ def sync():
         bm.dismiss_popups()
         
         # Scroll and load more pages
-        print("Scrolling and clicking 'Tải thêm' to load all pages...")
-        for _ in range(8):
-            bm.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-            time.sleep(2.0)
-            click_more_script = """
-            try {
-                const buttons = Array.from(document.querySelectorAll('div[role="button"], span, button'));
-                let clicked = false;
-                for (let btn of buttons) {
-                    const text = (btn.innerText || "").trim().toLowerCase();
-                    if (text === "tải thêm" || text === "see more" || text === "xem thêm") {
-                        btn.click();
-                        clicked = true;
-                        break;
-                    }
-                }
-                return clicked;
-            } catch(e) { return false; }
-            """
-            bm.driver.execute_script(click_more_script)
-            time.sleep(1.0)
-            
-        # Extract page names and IDs
-        extraction_script = """
+        print("Scrolling and loading all pages dynamically...")
+        last_count = 0
+        no_change_rounds = 0
+        max_scrolls = 30
+        
+        # Helper count script
+        count_script = """
         try {
-            const pageBlocks = [];
-            const profileLinks = Array.from(document.querySelectorAll('a')).filter(a => {
+            const actionLinks = Array.from(document.querySelectorAll('a')).filter(a => {
                 const href = a.href || "";
-                return href.includes('profile.php?id=') && (a.innerText || "").trim().length > 0;
+                return (href.includes('latest/inbox') && href.includes('asset_id=')) || 
+                       (href.includes('ad_center') && href.includes('page_id='));
             });
-
-            for (let a of profileLinks) {
-                const name = a.innerText.trim();
-                let parent = a.parentElement;
-                let pageId = "";
-                let attempts = 0;
-                while (parent && attempts < 8) {
-                    const subLinks = Array.from(parent.querySelectorAll('a'));
-                    for (let sub of subLinks) {
-                        const href = sub.href || "";
-                        let match = href.match(/[?&](page_id|asset_id)=(\d+)/);
-                        if (match) {
-                            pageId = match[2];
+            const ids = new Set();
+            actionLinks.forEach(link => {
+                let match = link.href.match(/[?&](page_id|asset_id)=(\d+)/);
+                if (match) ids.add(match[2]);
+            });
+            return ids.size;
+        } catch(e) { return 0; }
+        """
+        
+        for i in range(max_scrolls):
+            # Scroll to bottom
+            bm.driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+            time.sleep(2.5)
+            
+            # Get current count
+            current_count = bm.driver.execute_script(count_script)
+            print(f"Scroll {i+1}/{max_scrolls}: Found {current_count} pages visible in DOM.")
+            
+            if current_count > last_count:
+                # Count increased, continue scrolling
+                no_change_rounds = 0
+                last_count = current_count
+                time.sleep(1.0)
+            else:
+                # Count did not increase, try clicking "Tải thêm"
+                click_more_script = """
+                try {
+                    const buttons = Array.from(document.querySelectorAll('div[role="button"], span, button, a'));
+                    let clicked = false;
+                    for (let btn of buttons) {
+                        const text = (btn.innerText || "").trim().toLowerCase();
+                        if (text === "tải thêm" || text === "see more" || text === "xem thêm" || text === "xem thêm trang") {
+                            btn.click();
+                            clicked = true;
                             break;
                         }
                     }
-                    if (pageId) break;
+                    return clicked;
+                } catch(e) { return false; }
+                """
+                clicked = bm.driver.execute_script(click_more_script)
+                if clicked:
+                    print("Clicked 'Tải thêm' button. Waiting 7 seconds for async load...")
+                    time.sleep(7.0)
+                    # Get count again after wait
+                    current_count = bm.driver.execute_script(count_script)
+                    print(f"After click load: Found {current_count} pages visible in DOM.")
+                    if current_count > last_count:
+                        no_change_rounds = 0
+                        last_count = current_count
+                        continue
+                
+                # If no click happened, or count still didn't increase
+                no_change_rounds += 1
+                if no_change_rounds >= 3:
+                    print("Page count stabilized and no 'Tải thêm' button clicked. Stopping scroll.")
+                    break
+              # Extract page names and IDs
+        extraction_script = """
+        try {
+            const pageBlocks = [];
+            const actionLinks = Array.from(document.querySelectorAll('a')).filter(a => {
+                const href = a.href || "";
+                return (href.includes('latest/inbox') && href.includes('asset_id=')) || 
+                       (href.includes('ad_center') && href.includes('page_id='));
+            });
+
+            actionLinks.forEach(actionLink => {
+                const href = actionLink.href;
+                let pageId = "";
+                let match = href.match(/[?&](page_id|asset_id)=(\d+)/);
+                if (match) {
+                    pageId = match[2];
+                }
+                if (!pageId) return;
+                
+                if (pageBlocks.some(p => p.page_id === pageId)) return;
+                
+                let parent = actionLink.parentElement;
+                let pageName = "";
+                let publicUrl = "";
+                let attempts = 0;
+                while (parent && attempts < 12) {
+                    const subLinks = Array.from(parent.querySelectorAll('a'));
+                    for (let sub of subLinks) {
+                        const subHref = sub.href || "";
+                        const subText = (sub.innerText || "").trim();
+                        if (subText.length > 0 && 
+                            !subHref.includes('latest/inbox') && 
+                            !subHref.includes('ad_center') && 
+                            !subHref.includes('business.facebook.com') && 
+                            !subHref.includes('pages/?category') &&
+                            !["tin nhắn", "quảng cáo", "inbox", "message", "messages", "ads", "ad", "tạo quảng cáo"].includes(subText.toLowerCase())) {
+                            
+                            pageName = subText;
+                            if (subHref) {
+                                try {
+                                    const u = new URL(subHref);
+                                    if (u.pathname === "/profile.php") {
+                                        const idVal = u.searchParams.get("id");
+                                        publicUrl = u.origin + u.pathname + "?id=" + idVal;
+                                    } else {
+                                        publicUrl = u.origin + u.pathname;
+                                    }
+                                } catch(err) {
+                                    publicUrl = subHref;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    if (pageName && pageId) break;
                     parent = parent.parentElement;
                     attempts++;
                 }
                 
-                if (name && pageId) {
-                    if (!pageBlocks.some(p => p.page_id === pageId)) {
-                        pageBlocks.push({ name, page_id: pageId });
-                    }
+                if (pageName && pageId) {
+                    pageBlocks.push({ name: pageName, page_id: pageId, public_url: publicUrl });
                 }
-            }
+            });
             return pageBlocks;
         } catch(e) {
             return [];
@@ -114,7 +204,7 @@ def sync():
     if not browser_pages:
         print("No pages extracted from browser. Sync aborted to prevent data loss.")
         return
-
+ 
     # 2. Load existing links.json
     existing_links = []
     if os.path.exists(TARGET_LINKS):
@@ -134,6 +224,7 @@ def sync():
     for bp in browser_pages:
         name = bp["name"]
         page_id = bp["page_id"]
+        public_url = bp.get("public_url", "")
         target_url = f"https://business.facebook.com/latest/insights/overview/?business_id={BUSINESS_ID}&asset_id={page_id}"
         
         entry = {
@@ -141,6 +232,7 @@ def sync():
             "page_name": name,
             "page_id": page_id,
             "url": target_url,
+            "public_url": public_url,
             "status": "Chưa chạy"
         }
         
@@ -153,6 +245,8 @@ def sync():
             entry["latest_post_title"] = old.get("latest_post_title", "")
             if "last_scanned" in old:
                 entry["last_scanned"] = old["last_scanned"]
+            if "public_url" not in entry or not entry["public_url"]:
+                entry["public_url"] = old.get("public_url", "")
                 
         new_links.append(entry)
         

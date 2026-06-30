@@ -16,7 +16,7 @@ class SocialPoster:
         self.fanpage_url = fanpage_url
 
     @track_errors("social_poster", "post_to_fanpage")
-    def post_to_fanpage(self, profile_name, text_path, image_path):
+    def post_to_fanpage(self, profile_name, text_path, image_path, cleanup=True):
         """
         Tự động hóa đăng bài lên Facebook Fanpage.
         """
@@ -104,9 +104,12 @@ class SocialPoster:
                     p_log(profile_name, f"[{profile_name}] Tìm nút upload ảnh gốc...")
                     add_photo_locators = [
                         'text="Thêm ảnh"', 'text="Add photo"', 'text="Add Photo"',
+                        'div[aria-label*="Chọn thêm ảnh"]',
+                        'div[aria-label*="Chọn ảnh"]',
                         'div[aria-label*="photo"]', 'div[aria-label*="Photo"]', 'div[aria-label*="ảnh"]', 'div[aria-label*="Ảnh"]', 
                         'span:has-text("Add photo")', 'span:has-text("Thêm ảnh")', 
-                        'div:has-text("Photo/video")', 'div:has-text("Ảnh/video")'
+                        'div:has-text("Photo/video")', 'div:has-text("Ảnh/video")',
+                        'div[role="button"]:has-text("Thêm ảnh")', 'div[role="button"]:has-text("Add photo")'
                     ]
                     
                     add_photo_btn = None
@@ -117,41 +120,57 @@ class SocialPoster:
                             break
                             
                     if not add_photo_btn:
+                        for loc in add_photo_locators:
+                            loc_obj = page.locator(loc)
+                            if loc_obj.count() > 0:
+                                add_photo_btn = loc_obj.last
+                                break
+                            
+                    if not add_photo_btn:
                         add_photo_btn = container.locator("text='Thêm ảnh'").last
+                        if add_photo_btn.count() == 0:
+                            add_photo_btn = page.locator("text='Thêm ảnh'").last
                     
-                    p_log(profile_name, f"[{profile_name}] Đang click nút Thêm ảnh...")
-                    try:
-                        add_photo_btn.click(timeout=5000)
-                    except Exception as click_err:
-                        p_log(profile_name, f"[{profile_name}] Click thường nút Thêm ảnh thất bại, thử click force...")
+                    if add_photo_btn and add_photo_btn.count() > 0:
+                        # Thử bắt File Chooser ngay từ lần click đầu tiên để tránh bị trượt dialog hệ thống
+                        p_log(profile_name, f"[{profile_name}] Đang click nút Thêm ảnh và bắt File Chooser...")
                         try:
-                            add_photo_btn.click(timeout=3000, force=True)
-                        except Exception as click_err2:
-                            p_log(profile_name, f"[{profile_name}] Click force nút Thêm ảnh thất bại, thử dispatch event...")
-                            try:
-                                add_photo_btn.dispatch_event('click')
-                            except:
-                                pass
-                    
-                    time.sleep(2) # Chờ xíu cho DOM sinh ra input mới
-                    
-                    # Thử quét tất cả các input file trong page và các frames sau khi click nút Thêm ảnh
-                    for frame in [page] + page.frames:
-                        try:
-                            file_inputs = frame.locator('input[type="file"]').all()
-                            for inp in file_inputs:
+                            with page.expect_file_chooser(timeout=4000) as fc_info:
                                 try:
-                                    inp.set_input_files(image_path, timeout=3000)
-                                    p_log(profile_name, f"[{profile_name}] ✅ Đã set_input_files thành công sau khi click nút Thêm ảnh!")
-                                    upload_success = True
-                                    break
+                                    add_photo_btn.click(timeout=3000)
+                                except Exception as click_err:
+                                    try:
+                                        add_photo_btn.click(timeout=3000, force=True)
+                                    except Exception as click_err2:
+                                        add_photo_btn.dispatch_event('click')
+                            file_chooser = fc_info.value
+                            file_chooser.set_files(image_path)
+                            p_log(profile_name, f"[{profile_name}] ✅ Đã tải ảnh lên thành công (qua File Chooser trực tiếp khi click)!")
+                            upload_success = True
+                        except Exception as fc_err:
+                            p_log(profile_name, f"[{profile_name}] File Chooser không kích hoạt trực tiếp ({fc_err}). Đang kiểm tra xem DOM có sinh ra input type=file không...")
+                            
+                            # Chờ xíu cho DOM sinh ra input mới
+                            time.sleep(2)
+                            
+                            # Thử quét tất cả các input file trong page và các frames sau khi click nút Thêm ảnh
+                            for frame in [page] + page.frames:
+                                try:
+                                    file_inputs = frame.locator('input[type="file"]').all()
+                                    for inp in file_inputs:
+                                        try:
+                                            inp.set_input_files(image_path, timeout=3000)
+                                            p_log(profile_name, f"[{profile_name}] ✅ Đã set_input_files thành công sau khi click nút Thêm ảnh!")
+                                            upload_success = True
+                                            break
+                                        except Exception:
+                                            pass
+                                    if upload_success:
+                                        break
                                 except Exception:
                                     pass
-                            if upload_success:
-                                break
-                        except Exception:
-                            pass
-                            
+                    else:
+                        p_log(profile_name, f"[{profile_name}] Không tìm thấy nút Thêm ảnh để click.")
                 except Exception as btn_err:
                     p_log(profile_name, f"[{profile_name}] Warning: Lỗi khi thao tác với nút Thêm ảnh: {btn_err}")
 
@@ -191,7 +210,7 @@ class SocialPoster:
                 except Exception as menu_err:
                     p_log(profile_name, f"[{profile_name}] Warning: Lỗi khi upload qua Menu: {menu_err}")
 
-            # --- CÁCH 4: Click nút Thêm ảnh một lần nữa bằng expect_file_chooser ---
+            # --- CÁCH 4: Click nút Thêm ảnh một lần nữa bằng expect_file_chooser (dự phòng) ---
             if not upload_success:
                 try:
                     p_log(profile_name, f"[{profile_name}] Thử expect_file_chooser trực tiếp bằng cách click lại nút Thêm ảnh...")
@@ -211,7 +230,28 @@ class SocialPoster:
             
             # Ghi Text
             try:
-                textbox = container.locator('div[role="combobox"][contenteditable="true"], div[aria-label*="viết"], div[aria-label*="write"], div[aria-label*="nghĩ"], div[aria-label*="mind"]').first
+                textbox_selectors = [
+                    'div[role="combobox"][contenteditable="true"]',
+                    'div[aria-label*="viết"]',
+                    'div[aria-label*="write"]',
+                    'div[aria-label*="nghĩ"]',
+                    'div[aria-label*="mind"]'
+                ]
+                textbox = None
+                for sel in textbox_selectors:
+                    loc = container.locator(sel).first
+                    if loc.count() > 0:
+                        textbox = loc
+                        break
+                if not textbox:
+                    for sel in textbox_selectors:
+                        loc = page.locator(sel).first
+                        if loc.count() > 0:
+                            textbox = loc
+                            break
+                if not textbox:
+                    raise Exception("Không tìm thấy ô nhập trạng thái (textbox) trên cả container lẫn page.")
+                
                 textbox.click(force=True)
                 textbox.press_sequentially(status_text, delay=20)
                 p_log(profile_name, f"[{profile_name}] Đã nhập trạng thái từng chữ.")
@@ -223,12 +263,127 @@ class SocialPoster:
             
             # Bấm nút Đăng
             try:
-                post_btn = container.locator('div[role="button"]:has-text("Đăng"), div[role="button"]:has-text("Post"), button:has-text("Đăng"), button:has-text("Post")').first
-                try:
-                    post_btn.click(force=True, timeout=5000)
-                except:
-                    post_btn.dispatch_event('click')
-                p_log(profile_name, f"[{profile_name}] Đã click nút Đăng bài thành công lên Fanpage!")
+                post_btn_selectors = [
+                    'div[role="button"]:has-text("Đăng")',
+                    'div[role="button"]:has-text("Post")',
+                    'div[role="button"]:has-text("Publish")',
+                    'div[role="button"]:has-text("Xuất bản")',
+                    'button:has-text("Đăng")',
+                    'button:has-text("Post")',
+                    'button:has-text("Publish")',
+                    'button:has-text("Xuất bản")',
+                    'div[aria-label="Đăng"]',
+                    'div[aria-label="Post"]',
+                    'div[aria-label="Publish"]',
+                    '[aria-label="Đăng bài"]',
+                    '[data-testid="composer-submit-button"]',
+                ]
+                post_btn = None
+                
+                # Chờ nút bỏ aria-disabled (tối đa 12s) - FB disable nút khi nội dung chưa sẵn sàng
+                p_log(profile_name, f"[{profile_name}] Đang chờ nút Đăng trở nên khả dụng (bỏ aria-disabled)...")
+                deadline = time.time() + 12
+                while time.time() < deadline:
+                    for sel in post_btn_selectors:
+                        try:
+                            loc = page.locator(sel).first
+                            if loc.count() > 0:
+                                aria_disabled = loc.get_attribute("aria-disabled", timeout=1000)
+                                if aria_disabled != "true":
+                                    post_btn = loc
+                                    p_log(profile_name, f"[{profile_name}] Nút Đăng đã sẵn sàng (selector: {sel})")
+                                    break
+                        except Exception:
+                            pass
+                    if post_btn:
+                        break
+                    time.sleep(1)
+                
+                # Nếu vẫn chưa tìm thấy enabled, thử tìm bất kỳ nút nào (kể cả disabled)
+                if not post_btn:
+                    p_log(profile_name, f"[{profile_name}] Không tìm thấy nút Đăng enabled. Thử tìm bao gồm cả disabled...")
+                    for sel in post_btn_selectors:
+                        try:
+                            loc = container.locator(sel).first
+                            if loc.count() > 0:
+                                aria_disabled = loc.get_attribute("aria-disabled", timeout=1000)
+                                p_log(profile_name, f"[{profile_name}] Tìm thấy nút Đăng (aria-disabled={aria_disabled}) qua selector: {sel}")
+                                post_btn = loc
+                                break
+                        except Exception:
+                            pass
+                    if not post_btn:
+                        for sel in post_btn_selectors:
+                            try:
+                                loc = page.locator(sel).first
+                                if loc.count() > 0:
+                                    aria_disabled = loc.get_attribute("aria-disabled", timeout=1000)
+                                    p_log(profile_name, f"[{profile_name}] Tìm thấy nút Đăng (aria-disabled={aria_disabled}) trên page qua selector: {sel}")
+                                    post_btn = loc
+                                    break
+                            except Exception:
+                                pass
+                
+                # DEBUG: Dump tất cả button texts hiện có trên trang để chẩn đoán
+                if not post_btn:
+                    try:
+                        all_btn_info = page.evaluate("""
+                            () => {
+                                const result = [];
+                                const elems = document.querySelectorAll('[role="button"], button');
+                                for (const el of elems) {
+                                    const txt = (el.innerText || el.textContent || '').trim().substring(0, 60);
+                                    const aria = el.getAttribute('aria-label') || '';
+                                    const disabled = el.getAttribute('aria-disabled') || '';
+                                    const testid = el.getAttribute('data-testid') || '';
+                                    if (txt || aria) {
+                                        result.push({txt, aria, disabled, testid, tag: el.tagName});
+                                    }
+                                }
+                                return result;
+                            }
+                        """)
+                        p_log(profile_name, f"[{profile_name}] DEBUG - Tất cả buttons trên trang lúc này:")
+                        for btn_info in (all_btn_info or []):
+                            p_log(profile_name, f"  >> tag={btn_info.get('tag')} text=[{repr(btn_info.get('txt',''))}] aria=[{btn_info.get('aria','')}] disabled={btn_info.get('disabled','')} testid={btn_info.get('testid','')}")
+                    except Exception as dbg_e:
+                        p_log(profile_name, f"[{profile_name}] DEBUG dump thất bại: {dbg_e}")
+                
+                # Fallback: dùng JavaScript để tìm và click (dùng includes để bắt zero-width chars)
+                if not post_btn:
+                    p_log(profile_name, f"[{profile_name}] Thử dùng JavaScript để tìm và click nút Đăng...")
+                    clicked_via_js = page.evaluate("""
+                        () => {
+                            const POST_KEYWORDS = ['Đăng', 'Post', 'Publish', 'Xuất bản'];
+                            const allBtns = document.querySelectorAll('[role="button"], button');
+                            for (const btn of allBtns) {
+                                const txt = (btn.innerText || btn.textContent || '').trim();
+                                for (const kw of POST_KEYWORDS) {
+                                    if ((txt === kw || txt.includes(kw)) && txt.length < 20) {
+                                        btn.click();
+                                        return 'clicked-text:' + JSON.stringify(txt);
+                                    }
+                                }
+                            }
+                            for (const kw of POST_KEYWORDS) {
+                                const el = document.querySelector(`[aria-label="${kw}"]`);
+                                if (el) { el.click(); return 'clicked-aria:' + kw; }
+                            }
+                            const byTestid = document.querySelector('[data-testid*="submit"], [data-testid*="post"], [data-testid*="publish"]');
+                            if (byTestid) { byTestid.click(); return 'clicked-testid:' + (byTestid.getAttribute('data-testid') || ''); }
+                            return null;
+                        }
+                    """)
+                    if clicked_via_js:
+                        p_log(profile_name, f"[{profile_name}] Đã click nút Đăng bài qua JavaScript: {clicked_via_js}!")
+                    else:
+                        raise Exception("Không tìm thấy nút Đăng/Post trên cả container lẫn page.")
+                else:
+                    try:
+                        post_btn.click(force=True, timeout=5000)
+                    except Exception:
+                        post_btn.dispatch_event('click')
+                    p_log(profile_name, f"[{profile_name}] Đã click nút Đăng bài thành công lên Fanpage!")
             except Exception as e:
                 if "Target page, context or browser has been closed" in str(e) or "Execution context was destroyed" in str(e):
                     p_log(profile_name, f"[{profile_name}] Báo lỗi chuyển hướng sau khi Đăng. Cứ xem như Đăng thành công!")
@@ -239,7 +394,8 @@ class SocialPoster:
             time.sleep(15) # Đợi quá trình đăng hoàn tất
             
             # --- Dọn dẹp file AI đã tạo sau khi đăng thành công ---
-            self._cleanup_output_files(profile_name, text_path, image_path)
+            if cleanup:
+                self._cleanup_output_files(profile_name, text_path, image_path)
             
             return True
             

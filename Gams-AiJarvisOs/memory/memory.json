@@ -1,0 +1,12 @@
+{
+  "javis_memory": [
+    "Hệ thống Jarvis OS (AI Jarvis Dashboard) sử dụng cơ chế VectorDB giả lập để truy vấn kiến thức bằng phương pháp chấm điểm tần suất từ khóa (Keyword-based Score TF). Dữ liệu kiến thức được lưu trữ tại memory/memory.json và được quản lý bởi MemoryStore.",
+    "Antigravity Bridge là cổng kết nối hai chiều chạy trên nền HTTP/Socket giữa Jarvis OS Local Server và Antigravity AI Assistant. Cổng này cho phép Antigravity tự động phát hiện, phân tích và sửa lỗi code trực tiếp trên hệ thống của người dùng.",
+    "Quy trình tự sửa lỗi của Jarvis OS (Self-Healing System): Khi một plugin gặp lỗi lúc chạy tự động (ví dụ: gams_insight_reader bị ModuleNotFoundError), sự kiện lỗi sẽ được ghi nhận tại memory/error_memory.json. Agent tự giám sát (system_monitor) sẽ phát hiện lỗi và gửi yêu cầu vá lỗi đến Antigravity để sinh code sửa.",
+    "Các tác vụ crawling Facebook Fanpage (như Gams Insight Reader) được cấu hình thông qua plugins/data/gams_insight/links.json. Các fanpage được quét lượt follow, lượt tương tác, ngày đăng và tiêu đề bài viết mới nhất.",
+    "Đồng bộ hóa Fanpage (Fanpage Sync): Để đồng bộ danh sách Fanpage từ trình duyệt Chrome, Jarvis sử dụng script core/sync_fanpages.py để lấy danh sách từ Profile Chrome người dùng (user_data) đã lưu trong plugins/data/gams_insight/user_data.",
+    "Hệ thống Scheduler của Jarvis OS chạy các tác vụ nền theo chu kỳ cron định sẵn. Danh sách các tác vụ scheduler được lưu trữ trong plugins/data/plugin_settings.json và được điều phối bởi core/scheduler.py.",
+    "Để tích hợp một API Token mới (Facebook Ads API, TikTok API, Google Sheets API), truy cập tab Cấu Hình (Settings) trên Dashboard. Hệ thống lưu trữ các thông tin này tại core/api_settings.py một cách bảo mật.",
+    "Để tạo một tool mới bằng AI (Self-Evolution), người dùng gửi mô tả chức năng qua tab Chat. Hệ thống sẽ gửi yêu cầu sinh code plugin qua Endpoint /tools/request và tự động đăng ký plugin mới vào hệ thống."
+  ]
+}

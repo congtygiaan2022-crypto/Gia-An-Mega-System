@@ -1,0 +1,44 @@
+[
+  {
+    "id": "p-1781458177815",
+    "name": "Test 3",
+    "group": "Facebook Ads",
+    "proxy": "No Proxy (Direct)",
+    "browserVersion": "Chromium 125.0",
+    "lastOpened": "2026-06-22 15:29",
+    "notes": "",
+    "cookiesCount": 0,
+    "platform": "Windows",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "port": 15003,
+    "status": "stopped"
+  },
+  {
+    "id": "p-1781458170806",
+    "name": "Test 2",
+    "group": "Facebook Ads",
+    "proxy": "No Proxy (Direct)",
+    "browserVersion": "Chromium 125.0",
+    "lastOpened": "2026-06-22 15:29",
+    "notes": "",
+    "cookiesCount": 0,
+    "platform": "Windows",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "port": 15002,
+    "status": "stopped"
+  },
+  {
+    "id": "p-1781279053499",
+    "name": "Test 1",
+    "group": "Facebook Ads",
+    "proxy": "No Proxy (Direct)",
+    "browserVersion": "Chromium 125.0",
+    "lastOpened": "2026-06-22 15:29",
+    "notes": "",
+    "cookiesCount": 0,
+    "platform": "Windows",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "status": "stopped",
+    "port": 15001
+  }
+]

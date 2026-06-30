@@ -93,6 +93,11 @@ def run_cli():
 
     # Xác định profile dir cho CLI (dùng uid từ config nếu có)
     uid = CONFIG["facebook"].get("uid", "") or "cli"
+    lock_name = f"checker_{uid}"
+    from modules.lock_manager import acquire_lock, release_lock
+    if not acquire_lock(lock_name):
+        log.critical(f"Tài khoản/tính năng '{lock_name}' đang được chạy bởi một tiến trình khác. Không thể khởi chạy trùng lặp.")
+        sys.exit(1)
     profile_dir = chrome_profile_dir(uid)
 
     with ManagedChromeProfile(profile_dir) as managed:
@@ -148,6 +153,10 @@ def run_cli():
         finally:
             db.close()
             log.info("=== FB Copyright Checker đã dừng ===")
+            try:
+                release_lock(lock_name)
+            except Exception:
+                pass
             # ManagedChromeProfile.__exit__ sẽ tự quit driver + close profile
 
 

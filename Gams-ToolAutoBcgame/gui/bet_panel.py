@@ -27,14 +27,14 @@ class BetPanel(ctk.CTkFrame):
                                             command=self._toggle_bet_entry, font=ctk.CTkFont(size=12))
         self.rb_fixed.grid(row=3, column=0, padx=20, pady=2, sticky="w")
         
-        self.ent_fixed_amount = ctk.CTkEntry(self, placeholder_text="Ví dụ: 1000", width=120)
+        self.ent_fixed_amount = ctk.CTkEntry(self, placeholder_text="Ví dụ: 1000", width=120, height=32)
         self.ent_fixed_amount.grid(row=3, column=1, padx=10, pady=2, sticky="w")
         self.ent_fixed_amount.configure(state="disabled")
 
         # Stop Loss
         self.lbl_sl = ctk.CTkLabel(self, text="Cắt lỗ (USDT):", font=ctk.CTkFont(size=12))
         self.lbl_sl.grid(row=4, column=0, padx=10, pady=(10, 5), sticky="w")
-        self.ent_stop_loss = ctk.CTkEntry(self, placeholder_text="100.0", width=120)
+        self.ent_stop_loss = ctk.CTkEntry(self, placeholder_text="100.0", width=120, height=32)
         self.ent_stop_loss.insert(0, str(config.get("risk", {}).get("stop_loss", 100)))
         self.ent_stop_loss.grid(row=4, column=1, padx=10, pady=(10, 5), sticky="w")
 
@@ -53,7 +53,7 @@ class BetPanel(ctk.CTkFrame):
                                             command=self._toggle_match_entry, font=ctk.CTkFont(size=12))
         self.rb_manual.grid(row=7, column=0, padx=20, pady=2, sticky="w")
         
-        self.ent_manual_match = ctk.CTkEntry(self, placeholder_text="Arsenal vs Bayern", width=180)
+        self.ent_manual_match = ctk.CTkEntry(self, placeholder_text="Arsenal vs Bayern", width=280, height=32)
         self.ent_manual_match.insert(0, sel_config.get("manual_name", ""))
         self.ent_manual_match.grid(row=7, column=1, padx=10, pady=2, sticky="w")
         

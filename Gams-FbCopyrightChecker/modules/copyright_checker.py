@@ -20,6 +20,9 @@ from modules.config_loader import CONFIG
 
 log = get_logger(__name__)
 
+# ⚠ CẢNH BÁO: Facebook đang quét và chặn giả lập trình duyệt bằng URL trực tiếp.
+# Hạn chế sử dụng driver.get() với các URL này. Ưu tiên thao tác qua UI (click nút).
+# Chỉ dùng làm fallback cuối cùng nếu navigate qua UI thất bại.
 APPEALS_URL = "https://www.facebook.com/support/?tab_type=APPEALS"
 SUPPORT_URL  = "https://www.facebook.com/support/"
 
@@ -30,8 +33,11 @@ SUPPORT_URL  = "https://www.facebook.com/support/"
 
 def _is_chrome_dead(driver: webdriver.Chrome) -> bool:
     """Kiểm tra xem Chrome session có còn sống không."""
+    if not driver:
+        return True
     try:
-        _ = driver.current_url
+        # Sử dụng window_handles thay cho current_url để kiểm tra kết nối cực nhanh và độc lập với trạng thái load trang
+        _ = driver.window_handles
         return False
     except Exception:
         return True
@@ -39,26 +45,45 @@ def _is_chrome_dead(driver: webdriver.Chrome) -> bool:
 
 def _is_chrome_error(exc: Exception) -> bool:
     """Trả về True nếu exception là do Chrome bị tắt/crash/disconnect/connection reset."""
+    from selenium.common.exceptions import (
+        TimeoutException, NoSuchElementException, 
+        StaleElementReferenceException, ElementClickInterceptedException,
+        ElementNotInteractableException, NoSuchFrameException, NoSuchWindowException,
+        JavascriptException
+    )
+    # Loại trừ các lỗi tương tác/chờ/Javascript thông thường không phải do sập trình duyệt
+    if isinstance(exc, (
+        TimeoutException, NoSuchElementException,
+        StaleElementReferenceException, ElementClickInterceptedException,
+        ElementNotInteractableException, NoSuchFrameException, NoSuchWindowException,
+        JavascriptException
+    )):
+        return False
+
     err_str = str(exc).lower()
+    
+    # Nếu là lỗi mạng do trình duyệt báo cáo (Chrome vẫn sống và báo lỗi)
+    if "net::err_" in err_str:
+        return False
+
+    # Loại bỏ các lỗi transient client timeout (như httpconnectionpool, max retries exceeded)
+    # để tránh coi nhầm việc load chậm là sập trình duyệt.
     return (
-        isinstance(exc, (InvalidSessionIdException, WebDriverException))
+        isinstance(exc, InvalidSessionIdException)
         or "invalid session id" in err_str
         or "chrome not reachable" in err_str
-        or "max retries exceeded" in err_str
         or "connection refused" in err_str
-        or "httpsconnectionpool" in err_str
-        or "httpconnectionpool" in err_str
-        or "failed to establish a new connection" in err_str
-        or "no connection could be made" in err_str
         or "target window already closed" in err_str
         or "disconnected" in err_str
         or "connectionreseterror" in err_str
-        or "connection aborted" in err_str
         or "connection reset" in err_str
         or "10054" in err_str
         or "forcibly closed" in err_str
-        or "protocolerror" in err_str
     )
+
+
+# Số fanpage sau mỗi lần proactive restart Chrome để xả bộ nhớ
+CHROME_RESTART_EVERY = 8
 
 
 def rebuild_driver(old_driver: webdriver.Chrome, profile_dir: str = None) -> webdriver.Chrome:
@@ -92,7 +117,48 @@ def rebuild_driver(old_driver: webdriver.Chrome, profile_dir: str = None) -> web
         log.error("Đăng nhập lại thất bại sau khi rebuild Chrome")
         return new_driver  # trả về dù thất bại — caller quyết định tiếp
 
-    log.info("Đăng nhập lại thành công — tiếp tục quét.")
+    log.info("Đăng nhập lại thành công — đang chờ Chrome ổn định...")
+
+    # FIX #2: Chờ Chrome ổn định sau khi login — navigate về homepage và
+    # verify banner đã render trước khi tiếp tục bất kỳ thao tác nào.
+    try:
+        time.sleep(2)  # Cho cookie/session sync
+        new_driver.get("https://www.facebook.com/")
+        WebDriverWait(new_driver, 15).until(
+            EC.presence_of_element_located((By.XPATH, "//div[@role='banner']"))
+        )
+        time.sleep(1.5)  # Cho JS FB render xong animation
+        log.info("Chrome ổn định — banner FB đã sẵn sàng.")
+    except Exception as e:
+        log.debug(f"rebuild_driver stabilization: {e} — tiếp tục dù sao.")
+
+    return new_driver
+
+
+def proactive_rebuild_driver(old_driver: webdriver.Chrome, profile_dir: str = None) -> webdriver.Chrome:
+    """
+    Chủ động khởi động lại Chrome để giải phóng bộ nhớ tích lũy (ngăn OOM crash).
+    Khác rebuild_driver: Chrome vẫn còn sống — chỉ quit và mở lại.
+    """
+    from modules.fb_login import build_driver, login
+    from agent.chrome_manager import ensure_profile_closed
+
+    log.info("♻ Proactive Chrome restart để xả bộ nhớ...")
+    try:
+        old_driver.quit()
+    except Exception:
+        pass
+    if profile_dir:
+        try:
+            ensure_profile_closed(profile_dir)
+        except Exception:
+            pass
+    time.sleep(2)  # Cho Chrome process tắt hẳn
+    new_driver = build_driver(profile_dir=profile_dir)
+    if not login(new_driver):
+        log.warning("Đăng nhập lại sau proactive restart thất bại — tiếp tục dù sao.")
+    else:
+        log.info("♻ Proactive restart hoàn tất — Chrome sạch, tiếp tục quét.")
     return new_driver
 
 
@@ -155,9 +221,6 @@ def switch_context_via_menu(driver: webdriver.Chrome, target_name: str) -> bool:
         # 4. Tìm và click dòng có tên target_name (Chờ kết quả search render trong tối đa 8 giây)
         target_btn = None
         for _ in range(8):
-            if _is_chrome_dead(driver):
-                raise WebDriverException("Chrome is dead or disconnected")
-            
             script = """
             var targetName = arguments[0].toLowerCase();
             var xpath = "//div[@role='dialog' or @role='menu']//div[@role='button' or @role='link'][.//span]";
@@ -186,13 +249,23 @@ def switch_context_via_menu(driver: webdriver.Chrome, target_name: str) -> bool:
             driver.execute_script("arguments[0].click();", target_btn)
             log.info(f"Đã click chuyển sang: {target_name}")
             
-            # Chờ quá trình chuyển đổi (thường hiển thị màn hình chờ hoặc reload)
-            time.sleep(1.5)
-            
-            # Chờ trang chủ Facebook hoặc trang mới load xong
-            WebDriverWait(driver, 15).until(
-                lambda d: d.find_elements(By.CSS_SELECTOR, "[aria-label='Facebook'][role='navigation'], [data-pagelet='LeftRail'], [aria-label='Your profile']")
+            # Chờ quá trình chuyển đổi bắt đầu (animation FB)
+            time.sleep(2)
+
+            # Kiểm tra nhanh trang đã load chưa — không throw exception nếu chậm
+            # Dùng selector rộng hơn để bắt cả fanpage context lẫn profile context
+            _broad_css = (
+                "[role='navigation'], [data-pagelet='LeftRail'], "
+                "[aria-label='Your profile'], [role='main'], "
+                "[data-pagelet='ProfileTilesFeed'], [data-pagelet='FeedUnit']"
             )
+            try:
+                WebDriverWait(driver, 10).until(
+                    lambda d: d.find_elements(By.CSS_SELECTOR, _broad_css)
+                )
+            except TimeoutException:
+                # Trang load chậm nhưng Chrome vẫn sống — chấp nhận và tiếp tục
+                log.debug(f"switch_context: Trang load chậm sau khi chuyển sang '{target_name}' — tiếp tục.")
             log.info(f"Chuyển context sang '{target_name}' thành công.")
             bug_tracker.clear_bug("copyright_checker", "switch_context_via_menu")
             return True
@@ -208,131 +281,612 @@ def switch_context_via_menu(driver: webdriver.Chrome, target_name: str) -> bool:
         return False
 
 
+def _normalize_fb_url(url: str) -> str:
+    """Chuẩn hóa URL Facebook: web.facebook.com → facebook.com."""
+    return url.replace("https://web.facebook.com", "https://www.facebook.com") \
+               .replace("http://web.facebook.com", "https://www.facebook.com")
+
+
+def _navigate_url_with_retry(driver: webdriver.Chrome, url: str, max_attempts: int = 3) -> bool:
+    """Navigate đến URL với cơ chế thử lại khi timeout/lỗi mạng. Trả về True nếu thành công."""
+    for attempt in range(1, max_attempts + 1):
+        try:
+            driver.get(url)
+            return True
+        except TimeoutException as e:
+            if attempt == max_attempts:
+                log.warning(f"Timeout tải {url} sau {max_attempts} lần — tiếp tục.")
+                return True  # Chrome load được một phần — tiếp tục xử lý
+            log.warning(f"Timeout tải {url} (lần {attempt}/{max_attempts}), thử lại...")
+            time.sleep(2)
+        except WebDriverException as e:
+            err = str(e).lower()
+            if _is_chrome_error(e):
+                raise e
+            if "net::err_" in err:
+                if attempt == max_attempts:
+                    log.warning(f"Lỗi mạng tải {url} sau {max_attempts} lần — tiếp tục.")
+                    return True  # Trang có thể load được một phần
+                log.warning(f"Lỗi mạng tải {url} (lần {attempt}/{max_attempts}): {e}, thử lại...")
+                time.sleep(2)
+            else:
+                raise e
+    return True
+
+
 def switch_to_page(driver: webdriver.Chrome, page_url: str, page_name: str = "") -> bool:
     """
-    Switch sang fanpage bằng cách dùng menu hoặc truy cập URL trực tiếp.
+    Switch sang fanpage theo thứ tự ưu tiên:
+      1. Navigate thẳng đến URL page → click nút 'Switch Now' / 'Chuyển sang trang'
+      2. Nếu không có nút Switch (context đã đúng), kiểm tra URL hiện tại
+      3. Fallback: switch_context_via_menu() (chỉ hiệu quả với ≤10 pages phổ biến)
     """
     name_from_url = ""
     if page_url.startswith("#name="):
         name_from_url = page_url.split("=", 1)[1]
-    
+
     target_name = page_name or name_from_url
-    
-    if target_name:
-        # Ưu tiên switch qua menu
-        ok = switch_context_via_menu(driver, target_name)
-        if ok:
-            bug_tracker.clear_bug("copyright_checker", "switch_to_page")
-            return True
-            
-    # Fallback hoặc nếu dùng URL truyền thống
-    if page_url and not page_url.startswith("#"):
+
+    # ── Trường hợp đặc biệt: URL dạng #name=... (không có URL thật) ──────────
+    if page_url.startswith("#"):
+        if target_name:
+            ok = switch_context_via_menu(driver, target_name)
+            if ok:
+                bug_tracker.clear_bug("copyright_checker", "switch_to_page")
+            return ok
+        return False
+
+    # ── Bước 1: Navigate trực tiếp đến URL page ───────────────────────────────
+    # FIX #1: Đây là chiến lược ĐÚNG cho Facebook — navigate vào page rồi
+    # click nút 'Chuyển sang trang' thay vì dùng dropdown menu (chỉ hiện ~10 page).
+    try:
+        normalized_url = _normalize_fb_url(page_url)
+        log.debug(f"switch_to_page: Navigate đến {normalized_url}")
+
+        # Về trang chủ trước để đảm bảo context sạch
         try:
-            # Thử get page_url tối đa 3 lần nếu gặp TimeoutException
-            for attempt in range(1, 4):
-                try:
-                    driver.get(page_url)
-                    break
-                except TimeoutException as e:
-                    if attempt == 3:
-                        raise
-                    log.warning(f"Timeout khi tải trang page {page_url} (lần {attempt}/3), đang thử lại...")
-                    time.sleep(2)
-            # Chờ trang load
-            WebDriverWait(driver, 8).until(
-                EC.presence_of_element_located((By.XPATH, "//*"))
-            )
-            # Thử click nút "Switch Now" / "Chuyển ngay" trên trang (tăng thời gian chờ và sửa XPATH)
+            current = driver.current_url or ""
+            if "about:blank" in current or not current:
+                driver.get("https://www.facebook.com/")
+                time.sleep(1.5)
+        except Exception:
+            pass
+
+        _navigate_url_with_retry(driver, normalized_url)
+        time.sleep(2)  # Chờ trang render các nút action
+
+        # ── Bước 2: Tìm nút Switch Now / Chuyển sang trang ─────────────────────
+        # Facebook hiển thị nút này cho admin khi đang ở context khác.
+        switch_xpaths = [
+            # Nút dạng div[@role='button'] chứa text
+            "//div[@role='button'][contains(.,'Switch to Page') or contains(.,'Chuyển sang trang') or contains(.,'Switch Now') or contains(.,'Chuyển ngay') or contains(.,'Switch to') or contains(.,'Chuyển sang')]",
+            # Nút dạng a hoặc button
+            "//a[@role='button'][contains(.,'Switch') or contains(.,'Chuyển')]",
+            "//button[contains(.,'Switch') or contains(.,'Chuyển')]",
+            # Text node trực tiếp
+            "//*[self::span or self::div][normalize-space(text())='Switch to Page' or normalize-space(text())='Chuyển sang trang' or normalize-space(text())='Switch Now' or normalize-space(text())='Chuyển ngay']",
+        ]
+        switch_btn = None
+        for xpath in switch_xpaths:
             try:
-                switch_xpath = (
-                    "//div[@role='button'][contains(.,'Switch to Page') or contains(.,'Chuyển sang trang') or contains(.,'Switch Now') or contains(.,'Chuyển ngay')]"
-                    " | //*[contains(text(),'Switch to Page') or contains(text(),'Chuyển sang trang') or contains(text(),'Switch Now') or contains(text(),'Chuyển ngay')]"
+                switch_btn = WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.XPATH, xpath))
                 )
-                btn = WebDriverWait(driver, 8).until(
-                    EC.presence_of_element_located((By.XPATH, switch_xpath))
-                )
-                driver.execute_script("arguments[0].click();", btn)
-                time.sleep(1)
-                log.info(f"Đã click nút Switch Now trên trang cho {page_url}")
+                if switch_btn:
+                    break
+            except TimeoutException:
+                continue
+            except Exception as e:
+                if _is_chrome_error(e):
+                    raise e
+                continue
+
+        if switch_btn:
+            try:
+                driver.execute_script("arguments[0].scrollIntoView({block:'center'});", switch_btn)
+                time.sleep(0.5)
+                driver.execute_script("arguments[0].click();", switch_btn)
+                time.sleep(2.5)  # Chờ Facebook xử lý switch context
+                log.info(f"Đã click nút Switch sang '{target_name or page_url}'")
                 bug_tracker.clear_bug("copyright_checker", "switch_to_page")
                 return True
-            except Exception:
-                pass
-            
-            # Nếu không tìm thấy nút Switch Now trên trang, thử switch bằng tên page lấy từ Title trang
-            title = driver.title
-            if title and "facebook" not in title.lower():
-                ok = switch_context_via_menu(driver, title.strip())
-                if ok:
+            except Exception as e:
+                if _is_chrome_error(e):
+                    raise e
+                log.debug(f"Click switch btn lỗi: {e}")
+
+        # ── Bước 3: Không có nút Switch → kiểm tra xem context đã đúng chưa ────
+        # Nếu trang hiện tại là page đó (đang ở đúng context), không cần switch.
+        try:
+            current_url = driver.current_url or ""
+            # Trích xuất page_id từ URL để so sánh
+            import re as _re
+            pid_match = _re.search(r"profile\.php\?id=(\d+)", normalized_url)
+            if pid_match:
+                pid = pid_match.group(1)
+                if pid in current_url:
+                    log.info(f"Context đã ở đúng page '{target_name}' (ID={pid}) — không cần switch.")
                     bug_tracker.clear_bug("copyright_checker", "switch_to_page")
                     return True
-            bug_tracker.clear_bug("copyright_checker", "switch_to_page")
+            else:
+                # URL dạng /pagename — kiểm tra slug
+                slug = normalized_url.rstrip("/").split("/")[-1].lower()
+                if slug and slug in current_url.lower():
+                    log.info(f"Context đã ở đúng page '{target_name}' (slug={slug}) — không cần switch.")
+                    bug_tracker.clear_bug("copyright_checker", "switch_to_page")
+                    return True
         except Exception as e:
             if _is_chrome_error(e):
                 raise e
-            log.error(f"Lỗi fallback switch page {page_url}: {e}")
-            bug_tracker.log_bug("copyright_checker", "switch_to_page", e)
-            
-    return False
+
+        # ── Bước 4: JS-based search — quét toàn bộ nút hiển thị trên trang ────
+        try:
+            js_switch_script = """
+            var keywords = ['switch to page', 'chuyển sang trang', 'switch now', 'chuyển ngay',
+                            'switch to', 'chuyển sang'];
+            var xpath = "//div[@role='button'] | //a[@role='button'] | //button";
+            var query = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+            for (var i = 0; i < query.snapshotLength; i++) {
+                var el = query.snapshotItem(i);
+                if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+                    var txt = el.textContent.trim().toLowerCase();
+                    for (var j = 0; j < keywords.length; j++) {
+                        if (txt.indexOf(keywords[j]) !== -1) {
+                            return el;
+                        }
+                    }
+                }
+            }
+            return null;
+            """
+            js_btn = driver.execute_script(js_switch_script)
+            if js_btn:
+                driver.execute_script("arguments[0].click();", js_btn)
+                time.sleep(2.5)
+                log.info(f"Đã click nút Switch (JS fallback) sang '{target_name or page_url}'")
+                bug_tracker.clear_bug("copyright_checker", "switch_to_page")
+                return True
+        except Exception as e:
+            if _is_chrome_error(e):
+                raise e
+            log.debug(f"JS switch btn search lỗi: {e}")
+
+        # ── Bước 5: Fallback cuối — dùng menu dropdown ──────────────────────────
+        # Chỉ hiệu quả nếu page nằm trong ~10 pages phổ biến hiển thị trong dropdown.
+        if target_name:
+            log.debug(f"Thử fallback menu switch cho '{target_name}'...")
+            ok = switch_context_via_menu(driver, target_name)
+            if ok:
+                bug_tracker.clear_bug("copyright_checker", "switch_to_page")
+                return True
+
+        # Không switch được bằng bất kỳ phương án nào
+        log.warning(f"Không tìm được nút Switch cho '{target_name or page_url}' — bỏ qua.")
+        bug_tracker.log_bug("copyright_checker", "switch_to_page",
+                            f"Không tìm được nút switch cho {target_name or page_url}")
+        return False
+
+    except Exception as e:
+        if _is_chrome_error(e):
+            raise e
+        log.error(f"Lỗi switch_to_page '{target_name or page_url}': {e}")
+        bug_tracker.log_bug("copyright_checker", "switch_to_page", e)
+        return False
+
+
+def _is_in_page_context(driver: webdriver.Chrome) -> bool:
+    """
+    Kiểm tra xem hiện tại có đang ở context Fanpage không.
+    Trả về True nếu đang dùng Facebook với tư cách Page (không phải cá nhân).
+    """
+    try:
+        script = """
+        var indicators = [
+            'đang dùng facebook với tư cách',
+            'using facebook as',
+            "you're using facebook as",
+            'switch to your personal account',
+            'chuyển về tài khoản cá nhân'
+        ];
+        var bodyText = (document.body && document.body.textContent || '').toLowerCase();
+        for (var i = 0; i < indicators.length; i++) {
+            if (bodyText.indexOf(indicators[i]) !== -1) return true;
+        }
+        // Kiểm tra thêm: nếu có banner "đang hoạt động dưới dạng" trong header
+        var bannerEls = document.querySelectorAll('[role="banner"] *');
+        for (var j = 0; j < bannerEls.length; j++) {
+            var t = (bannerEls[j].getAttribute('aria-label') || '').toLowerCase();
+            if (t.indexOf('switch to') !== -1 || t.indexOf('chuyển về') !== -1) return true;
+        }
+        return false;
+        """
+        return bool(driver.execute_script(script))
+    except Exception:
+        return False
+
+
+def _js_click_avatar_and_switch_to_personal(driver: webdriver.Chrome, profile_name: str = "") -> bool:
+    """
+    Dùng JavaScript để tìm và click nút Avatar trong banner, sau đó chọn profile cá nhân.
+    Đây là cách đáng tin cậy hơn XPath vì không bị ảnh hưởng bởi thay đổi DOM của Facebook.
+    """
+    try:
+        # Bước 1: Tìm avatar button trong banner bằng JS (không dùng XPath timeout)
+        click_avatar_script = """
+        var banner = document.querySelector('[role="banner"]');
+        if (!banner) return false;
+
+        // Tìm tất cả div[@role='button'] có chứa img (avatar)
+        var buttons = banner.querySelectorAll('[role="button"]');
+        var avatarBtn = null;
+        for (var i = 0; i < buttons.length; i++) {
+            var btn = buttons[i];
+            // Ưu tiên button có aria-label liên quan đến profile
+            var lbl = (btn.getAttribute('aria-label') || '').toLowerCase();
+            if (lbl.indexOf('profile') !== -1 || lbl.indexOf('trang cá nhân') !== -1 ||
+                lbl.indexOf('account') !== -1 || lbl.indexOf('tài khoản') !== -1) {
+                avatarBtn = btn;
+                break;
+            }
+            // Fallback: button có chứa img
+            if (!avatarBtn && btn.querySelector('img')) {
+                avatarBtn = btn;
+            }
+        }
+        if (avatarBtn) {
+            avatarBtn.click();
+            return true;
+        }
+        return false;
+        """
+        clicked = driver.execute_script(click_avatar_script)
+        if not clicked:
+            log.debug("_js_click_avatar: Không tìm thấy avatar button trong banner.")
+            return False
+
+        time.sleep(1.5)
+
+        # Bước 2: Click "Xem tất cả trang cá nhân" / "See all profiles"
+        see_all_script = """
+        var keywords = ['xem tất cả trang cá nhân', 'see all profiles', 'see all Profiles'];
+        var els = document.querySelectorAll('[role="menu"] *, [role="dialog"] *');
+        for (var i = 0; i < els.length; i++) {
+            var txt = (els[i].textContent || '').trim().toLowerCase();
+            for (var j = 0; j < keywords.length; j++) {
+                if (txt === keywords[j].toLowerCase()) {
+                    els[i].click();
+                    return true;
+                }
+            }
+        }
+        // Broader search
+        var allEls = document.querySelectorAll('*');
+        for (var k = 0; k < allEls.length; k++) {
+            var t = (allEls[k].textContent || '').trim();
+            if (t === 'Xem tất cả trang cá nhân' || t === 'See all profiles' || t === 'See all Profiles') {
+                allEls[k].click();
+                return true;
+            }
+        }
+        return false;
+        """
+        see_all_clicked = driver.execute_script(see_all_script)
+        if not see_all_clicked:
+            log.debug("_js_click_avatar: Không tìm thấy 'Xem tất cả trang cá nhân'.")
+            # Đóng menu và return False
+            try:
+                from selenium.webdriver.common.keys import Keys
+                driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+            except Exception:
+                pass
+            return False
+
+        time.sleep(1.5)
+
+        # Bước 3: Tìm và click profile cá nhân trong danh sách
+        pick_profile_script = """
+        var targetName = arguments[0].toLowerCase();
+        var containers = document.querySelectorAll('[role="dialog"], [role="menu"]');
+        for (var c = 0; c < containers.length; c++) {
+            var btns = containers[c].querySelectorAll('[role="button"], [role="link"]');
+            for (var i = 0; i < btns.length; i++) {
+                var btn = btns[i];
+                if (btn.offsetWidth === 0 || btn.offsetHeight === 0) continue;
+                var txt = (btn.textContent || '').trim().toLowerCase();
+                if (!txt) continue;
+                // Ưu tiên tên chính xác
+                if (targetName && txt.indexOf(targetName) !== -1) {
+                    btn.click();
+                    return 'name_match';
+                }
+            }
+        }
+        // Fallback: click phần tử đầu tiên (thường là cá nhân)
+        for (var c2 = 0; c2 < containers.length; c2++) {
+            var firstBtns = containers[c2].querySelectorAll('[role="button"], [role="link"]');
+            for (var i2 = 0; i2 < firstBtns.length; i2++) {
+                var fb = firstBtns[i2];
+                if (fb.offsetWidth > 0 && fb.offsetHeight > 0 && (fb.textContent || '').trim()) {
+                    fb.click();
+                    return 'first_item';
+                }
+            }
+        }
+        return null;
+        """
+        result = driver.execute_script(pick_profile_script, profile_name or "")
+        if result:
+            log.info(f"Đã chọn profile ({result}): '{profile_name or 'đầu tiên'}'")
+            time.sleep(2)
+            return True
+
+        log.debug("_js_click_avatar: Không tìm thấy profile trong danh sách.")
+        return False
+
+    except Exception as e:
+        if _is_chrome_error(e):
+            raise e
+        log.debug(f"_js_click_avatar_and_switch_to_personal: {e}")
+        return False
 
 
 def switch_to_profile(driver: webdriver.Chrome) -> bool:
     """Quay về profile cá nhân."""
     try:
-        driver.get("https://www.facebook.com/")
-        
-        # Thử tìm nút Quick Switch (Biểu tượng vòng tròn 2 mũi tên bên cạnh Avatar)
+        # Dùng timeout ngắn hơn để tránh chờ lâu — trang FB thường load < 20s
+        # Bắt TimeoutException riêng để không nhầm với Chrome crash
+        original_timeout = CONFIG.get("selenium", {}).get("page_load_timeout", 30)
+        try:
+            driver.set_page_load_timeout(20)
+            driver.get("https://www.facebook.com/")
+        except TimeoutException:
+            log.warning("switch_to_profile: Trang chủ FB load chậm (timeout) — tiếp tục.")
+        except WebDriverException as e:
+            if "net::err_" not in str(e).lower():
+                raise e
+            # Lỗi mạng nhưng Chrome vẫn sống — tiếp tục
+            log.debug(f"switch_to_profile: Lỗi mạng FB ({type(e).__name__}) — tiếp tục.")
+        finally:
+            try:
+                driver.set_page_load_timeout(original_timeout)
+            except Exception:
+                pass
+
+        time.sleep(2)
+
+        # Bước 2: Phát hiện context hiện tại
+        # Nếu KHÔNG đang ở Page context → đã ở personal profile → return True ngay
+        if not _is_in_page_context(driver):
+            log.debug("switch_to_profile: Đã ở personal profile context — không cần switch.")
+            return True
+
+        log.info("switch_to_profile: Đang ở Page context — đang chuyển về personal profile...")
+
+        # Bước 3: Thử Quick Switch button (biểu tượng mũi tên vòng tròn)
         try:
             quick_switch = WebDriverWait(driver, 3).until(
-                EC.element_to_be_clickable((By.XPATH, "//div[@role='banner']//div[@aria-label='Switch profile' or @aria-label='Chuyển trang cá nhân'] | //div[@role='banner']//div[contains(@aria-label, 'Switch to') or contains(@aria-label, 'Chuyển sang')]"))
+                EC.element_to_be_clickable((By.XPATH,
+                    "//div[@role='banner']//div[@aria-label='Switch profile' or @aria-label='Chuyển trang cá nhân']"
+                    " | //div[@role='banner']//div[contains(@aria-label,'Switch to') or contains(@aria-label,'Chuyển sang')]"
+                ))
             )
             driver.execute_script("arguments[0].click();", quick_switch)
-            time.sleep(1)
-            return True
+            time.sleep(1.5)
+            if not _is_in_page_context(driver):
+                log.info("switch_to_profile: Quick Switch thành công.")
+                return True
         except Exception:
             pass
 
+        # Bước 4: JS-based avatar click + chọn profile
         profile_name = CONFIG["facebook"].get("profile_name", "")
+        ok = _js_click_avatar_and_switch_to_personal(driver, profile_name)
+        if ok:
+            return True
+
+        # Bước 5: Fallback cuối — dùng switch_context_via_menu
         if profile_name:
-            # Ưu tiên switch qua menu về profile chính
+            log.debug(f"switch_to_profile: Thử switch_context_via_menu cho '{profile_name}'...")
             ok = switch_context_via_menu(driver, profile_name)
             if ok:
                 return True
-        
-        # Fallback click thủ công vào menu
-        try:
-            avatar_xpath = (
-                "//div[@role='banner']//div[@role='button'][img]"
-                "|//div[contains(@aria-label, 'Your profile') or contains(@aria-label, 'Trang cá nhân') or contains(@aria-label, 'Account')]"
-            )
-            avatar = WebDriverWait(driver, 5).until(
-                EC.visibility_of_element_located((By.XPATH, avatar_xpath))
-            )
-            driver.execute_script("arguments[0].click();", avatar)
-            
-            # Click vào "Xem tất cả trang cá nhân"
-            see_all_xpath = "//*[contains(text(), 'Xem tất cả trang cá nhân') or contains(text(), 'See all profiles') or contains(text(), 'See all Profiles')]"
-            see_all_btn = WebDriverWait(driver, 3).until(
-                EC.visibility_of_element_located((By.XPATH, see_all_xpath))
-            )
-            driver.execute_script("arguments[0].click();", see_all_btn)
-            
-            # Chọn cái đầu tiên trong danh sách (thường là cá nhân)
-            time.sleep(0.5)
-            rows = driver.find_elements(By.XPATH, "//div[@role='dialog' or @role='menu']//div[@role='button' or @role='link'][.//span]")
-            if rows:
-                driver.execute_script("arguments[0].click();", rows[0])
-                time.sleep(1.5)
-                return True
-        except Exception:
-            pass
 
+        log.warning("switch_to_profile: Không thể switch về personal profile.")
         return False
     except Exception as e:
         if _is_chrome_error(e):
             raise e
         log.error(f"Lỗi switch về profile: {e}")
         return False
+
+
+# ─────────────────────────────────────────────
+# Điều hướng đến Support Inbox qua UI (tránh bị chặn)
+# ─────────────────────────────────────────────
+
+def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
+    """
+    Thực hiện một lượt điều hướng qua UI đến Support Inbox.
+    """
+    try:
+        from selenium.webdriver.common.keys import Keys
+    except ImportError:
+        Keys = None
+
+    # Helper: Click an toàn (thử click native trước, fallback JS nếu bị che)
+    def safe_click(element) -> bool:
+        try:
+            element.click()
+            return True
+        except Exception:
+            try:
+                driver.execute_script("arguments[0].click();", element)
+                return True
+            except Exception:
+                return False
+
+    # Helper: Tìm và click một XPath (timeout lớn hơn)
+    def click_element(xpath: str, name: str, timeout: int = 12) -> bool:
+        try:
+            element = WebDriverWait(driver, timeout).until(
+                EC.presence_of_element_located((By.XPATH, xpath))
+            )
+            if element:
+                if safe_click(element):
+                    log.info(f"Navigate Support Inbox: Đã click '{name}' thành công.")
+                    return True
+        except Exception as e:
+            log.warning(f"Navigate Support Inbox: Không thể click '{name}': {e}")
+        return False
+
+    # Bước 0: Thử đóng mọi popup/dialog đang che màn hình bằng phím ESC
+    if Keys:
+        try:
+            driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+            time.sleep(0.5)
+        except Exception:
+            pass
+
+    # Bước 1: Luôn về trang chủ Facebook trước để có giao diện chuẩn và banner ổn định
+    log.info("Navigate Support Inbox: Đang về trang chủ Facebook...")
+    try:
+        driver.get("https://www.facebook.com/")
+    except TimeoutException:
+        log.warning("Navigate Support Inbox: Trang chủ FB load chậm (timeout) — tiếp tục.")
+    except WebDriverException as e:
+        if "net::err_" not in str(e).lower():
+            raise e
+        log.debug(f"Navigate Support Inbox: Lỗi mạng trang chủ: {e}")
+    time.sleep(3)
+    
+    # Tổ hợp XPaths bằng toán tử '|' để tìm nhanh và tránh timeout tuần tự
+    avatar_xpath = (
+        "//div[@role='banner']//div[@role='button'][contains(@aria-label, 'Your profile') or contains(@aria-label, 'Trang cá nhân') or contains(@aria-label, 'Account')]"
+        " | //div[@role='banner']//div[@role='button'][.//img]"
+        " | //div[@role='banner']//div[contains(@aria-label, 'Your profile') or contains(@aria-label, 'Trang cá nhân') or contains(@aria-label, 'Account')]"
+    )
+    
+    # Bước 2: Click avatar/logo góc trên cùng bên phải (chờ tối đa 12s)
+    log.info("Navigate Support Inbox: Tìm và click avatar góc phải...")
+    if not click_element(avatar_xpath, "Avatar", timeout=12):
+        return False
+    time.sleep(1.5)
+    
+    # Bước 3: Click "Trợ giúp và hỗ trợ" / "Help & Support"
+    log.info("Navigate Support Inbox: Tìm và click 'Trợ giúp và hỗ trợ'...")
+    help_support_xpath = (
+        "//div[@role='dialog' or @role='menu']//span[contains(., 'Trợ giúp và hỗ trợ') or contains(., 'Help & Support') or contains(., 'Help & support') or contains(., 'Help and support')]"
+        " | //div[@role='dialog' or @role='menu']//*[contains(., 'Trợ giúp & hỗ trợ') or contains(., 'Help & support')]"
+        " | //span[contains(., 'Trợ giúp và hỗ trợ') or contains(., 'Help & Support') or contains(., 'Help & support')]"
+        " | //*[contains(., 'Trợ giúp & hỗ trợ') or contains(., 'Help & support')]"
+        " | //div[@role='dialog' or @role='menu']//div[@role='menuitem' or @role='button'][.//span[contains(., 'Trợ giúp') or contains(., 'Help')]]"
+    )
+    if not click_element(help_support_xpath, "Trợ giúp và hỗ trợ", timeout=8):
+        return False
+    time.sleep(1.5)
+    
+    # Bước 4: Click "Hộp thư hỗ trợ" / "Support Inbox"
+    log.info("Navigate Support Inbox: Tìm và click 'Hộp thư hỗ trợ'...")
+    support_inbox_xpath = (
+        "//div[@role='dialog' or @role='menu']//span[contains(., 'Hộp thư hỗ trợ') or contains(., 'Support Inbox') or contains(., 'Support inbox')]"
+        " | //div[@role='dialog' or @role='menu']//*[contains(., 'Hộp thư hỗ trợ') or contains(., 'Support inbox')]"
+        " | //div[@role='dialog' or @role='menu']//a[contains(@href, '/support')]//span"
+        " | //span[contains(., 'Hộp thư hỗ trợ') or contains(., 'Support Inbox') or contains(., 'Support inbox')]"
+        " | //*[contains(., 'Hộp thư hỗ trợ') or contains(., 'Support inbox')]"
+        " | //a[contains(@href, '/support')]//span"
+    )
+    if not click_element(support_inbox_xpath, "Hộp thư hỗ trợ", timeout=8):
+        return False
+    time.sleep(2)
+    
+    # Kiểm tra đã vào trang Support chưa
+    WebDriverWait(driver, 10).until(
+        lambda d: "/support" in d.current_url.lower()
+    )
+    time.sleep(1)
+    
+    # Bước 5: Click "Thông báo của bạn" / "Your alerts"
+    log.info("Navigate Support Inbox: Tìm và click 'Thông báo của bạn'...")
+    alerts_xpath = (
+        "//span[contains(., 'Thông báo của bạn') or contains(., 'Your alerts') or contains(., 'Your Alerts')]"
+        " | //*[contains(., 'Thông báo của bạn') or contains(., 'Your alerts') or contains(., 'Your Alerts')]"
+        " | //div[@role='tab']//span[contains(., 'Thông báo') or contains(., 'Alerts')]"
+    )
+    
+    alerts_clicked = click_element(alerts_xpath, "Thông báo của bạn", timeout=6)
+            
+    if not alerts_clicked:
+        log.info("Navigate Support Inbox: Đang chạy kịch bản JS dự phòng cho 'Thông báo của bạn'...")
+        click_script = """
+        var xpath = "//span | //div[@role='button'] | //div[@role='tab']";
+        var query = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+        for (var i = 0; i < query.snapshotLength; i++) {
+            var el = query.snapshotItem(i);
+            var text = el.textContent.trim().toLowerCase();
+            if (text === "thông báo của bạn" || text === "your alerts") {
+                el.click();
+                return true;
+            }
+        }
+        return false;
+        """
+        for attempt in range(5):
+            try:
+                if driver.execute_script(click_script):
+                    alerts_clicked = True
+                    log.info("Navigate Support Inbox: Đã click 'Thông báo của bạn' qua JS dự phòng.")
+                    break
+            except Exception:
+                pass
+            time.sleep(1)
+            
+    if alerts_clicked:
+        time.sleep(1.5)
+    else:
+        log.warning("Navigate Support Inbox: Không thể click tab 'Thông báo của bạn'")
+        return False
+        
+    # Chờ cho danh sách vi phạm tải xong
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, "//div[@role='article'] | //div[contains(@class,'x1qjc9v5')]"))
+        )
+        log.info("Navigate Support Inbox: Đã tải xong danh sách vi phạm.")
+    except TimeoutException:
+        log.warning("Navigate Support Inbox: Timeout chờ danh sách vi phạm tải.")
+    
+    log.info("Navigate Support Inbox: Đã vào trang Support Inbox thành công qua UI.")
+    return True
+
+
+def navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
+    """
+    Điều hướng đến trang Support Inbox bằng cách click qua UI thay vì dùng URL trực tiếp.
+    Có cơ chế thử lại (2 lần) và làm mới trang để tăng độ ổn định.
+    """
+    for attempt in range(1, 3):
+        log.info(f"Navigate Support Inbox: Bắt đầu điều hướng qua UI (lần thử {attempt}/2)...")
+        try:
+            ok = _do_navigate_to_support_inbox(driver)
+            if ok:
+                bug_tracker.clear_bug("copyright_checker", "navigate_to_support_inbox")
+                return True
+        except Exception as e:
+            if _is_chrome_error(e):
+                raise e
+            log.warning(f"Lỗi trong quá trình điều hướng UI (lần thử {attempt}/2): {e}")
+        
+        if attempt < 2:
+            log.info("Điều hướng UI thất bại, đang làm mới trang và thử lại...")
+            time.sleep(2)
+            try:
+                driver.refresh()
+                time.sleep(3)
+            except Exception:
+                pass
+                
+    bug_tracker.log_bug("copyright_checker", "navigate_to_support_inbox", "Thất bại sau 2 lần thử điều hướng UI")
+    return False
 
 
 # ─────────────────────────────────────────────
@@ -352,49 +906,86 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
     mem = get_memory()
     appeals = []
     try:
-        # Thử get APPEALS_URL tối đa 3 lần nếu gặp TimeoutException
-        for attempt in range(1, 4):
+        # Ưu tiên điều hướng qua UI (tránh bị Facebook chặn)
+        nav_ok = navigate_to_support_inbox(driver)
+        
+        if not nav_ok:
+            # Fallback: dùng URL trực tiếp nếu navigate qua UI thất bại
+            log.warning("Fallback: Dùng URL trực tiếp để vào Appeals (có thể bị chặn)...")
+            # Đóng mọi popup/menu đang mở trước khi navigate
             try:
-                driver.get(APPEALS_URL)
-                break
-            except TimeoutException as e:
-                if attempt == 3:
-                    raise
-                log.warning(f"Timeout khi tải trang Appeals (lần {attempt}/3), đang thử lại...")
-                time.sleep(2)
-        try:
-            # Chờ cho trang Appeals tải xong
-            WebDriverWait(driver, 8).until(
-                EC.presence_of_element_located((By.XPATH, "//div[@role='article'] | //div[contains(@class,'x1qjc9v5')]"))
-            )
-        except Exception:
-            pass
+                from selenium.webdriver.common.keys import Keys
+                driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
+                time.sleep(0.5)
+            except Exception:
+                pass
+            fallback_ok = False
+            # Dùng timeout ngắn hơn để tránh treo quá lâu mỗi lần retry
+            try:
+                driver.set_page_load_timeout(20)
+            except Exception:
+                pass
+            for attempt in range(1, 4):
+                try:
+                    driver.get(APPEALS_URL)
+                    fallback_ok = True
+                    break
+                except TimeoutException:
+                    log.warning(f"Timeout khi tải trang Appeals (lần {attempt}/3), đang thử lại...")
+                    # Điều hướng về blank để hủy pending request trước khi retry
+                    try:
+                        driver.get("about:blank")
+                    except Exception:
+                        pass
+                    time.sleep(2)
+                except WebDriverException as e:
+                    if "net::err_" not in str(e).lower():
+                        raise e
+                    log.warning(f"Lỗi mạng khi tải trang Appeals (lần {attempt}/3): {e}, đang thử lại...")
+                    try:
+                        driver.get("about:blank")
+                    except Exception:
+                        pass
+                    time.sleep(2)
+            # Khôi phục page_load_timeout về mặc định
+            try:
+                driver.set_page_load_timeout(CONFIG.get("selenium", {}).get("page_load_timeout", 30))
+            except Exception:
+                pass
+            if not fallback_ok:
+                log.warning("Fallback URL Appeals thất bại sau 3 lần. Bỏ qua fanpage này.")
+                return appeals
+        
+            try:
+                # Chờ cho trang Appeals/Support tải xong
+                WebDriverWait(driver, 8).until(
+                    EC.presence_of_element_located((By.XPATH, "//div[@role='article'] | //div[contains(@class,'x1qjc9v5')]"))
+                )
+            except Exception:
+                pass
 
-        # Bấm vào "Thông báo của bạn" (Your alerts)
-        try:
-            if _is_chrome_dead(driver):
-                raise WebDriverException("Chrome is dead or disconnected")
-            
-            click_script = """
-            var xpath = "//span | //div[@role='button'] | //div[@role='tab']";
-            var query = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-            for (var i = 0; i < query.snapshotLength; i++) {
-                var el = query.snapshotItem(i);
-                var text = el.textContent.trim().toLowerCase();
-                if (text === "thông báo của bạn" || text === "your alerts") {
-                    el.click();
-                    return true;
+            # Bấm vào "Thông báo của bạn" (Your alerts)
+            try:
+                click_script = """
+                var xpath = "//span | //div[@role='button'] | //div[@role='tab']";
+                var query = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+                for (var i = 0; i < query.snapshotLength; i++) {
+                    var el = query.snapshotItem(i);
+                    var text = el.textContent.trim().toLowerCase();
+                    if (text === "thông báo của bạn" || text === "your alerts") {
+                        el.click();
+                        return true;
+                    }
                 }
-            }
-            return false;
-            """
-            clicked = driver.execute_script(click_script)
-            if clicked:
-                time.sleep(1.5)
-        except Exception as e:
-            if _is_chrome_error(e):
-                raise e
-            log.warning("Không thể click tab 'Thông báo của bạn'")
+                return false;
+                """
+                clicked = driver.execute_script(click_script)
+                if clicked:
+                    time.sleep(1.5)
+            except Exception as e:
+                if _is_chrome_error(e):
+                    raise e
+                log.warning("Không thể click tab 'Thông báo của bạn'")
 
         # Cuộn thông minh: tối đa 10 lần, dừng khi số item ổn định
         _item_xpath = "//div[@role='article'] | //div[contains(@class,'x1qjc9v5')]//div[@data-visualcompletion]"
@@ -528,6 +1119,13 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
             raise e
         log.error(f"Lỗi lấy appeals [{context_name}]: {e}")
         bug_tracker.log_bug("copyright_checker", "get_copyright_appeals", e)
+    finally:
+        # Điều hướng về about:blank để hủy mọi pending request, giú Chrome ổn định
+        # trước khi _is_chrome_dead() được gọi tiếp theo
+        try:
+            driver.get("about:blank")
+        except Exception:
+            pass
     return appeals
 
 
@@ -561,8 +1159,6 @@ def delete_appeal_post(driver: webdriver.Chrome, appeal: dict, db: Database) -> 
             state = "START"
             max_attempts = 35 # Poll faster, more attempts
             for _ in range(max_attempts):
-                if _is_chrome_dead(driver):
-                    raise WebDriverException("Chrome is dead or disconnected during deletion flow")
                 time.sleep(0.8) # Wait slightly instead of 2.5s
                 
                 # Check current window handles to close popup tabs like Community Standards
@@ -850,6 +1446,8 @@ def run_full_copyright_check(
             _log(f"  ⏳ Chờ duyệt (confidence={ap.get('confidence', 0):.0%}): {ap['title'][:60]}")
 
     # 3. Quét từng fanpage
+    _fanpage_count = 0  # Đếm số fanpage đã quét trong phiên này
+
     for page in fanpages:
         # Kiểm tra dừng quét trước mỗi fanpage
         if stop_event and stop_event.is_set():
@@ -860,6 +1458,20 @@ def run_full_copyright_check(
         page_url  = page.get("url", "")
         if not page_url:
             continue
+
+        # ── Proactive Chrome restart sau mỗi CHROME_RESTART_EVERY fanpage ──
+        # Mục đích: xả bộ nhớ tích lũy, ngăn OOM crash
+        if _fanpage_count > 0 and _fanpage_count % CHROME_RESTART_EVERY == 0:
+            if not _is_chrome_dead(driver):
+                _log(f"♻ Đã quét {_fanpage_count} fanpage — khởi động lại Chrome để xả bộ nhớ...")
+                driver = proactive_rebuild_driver(driver, profile_dir)
+            else:
+                # Chrome đã chết rồi, dùng recover thông thường
+                driver, _ = _try_recover(driver, f"proactive_restart tại fanpage #{_fanpage_count}")
+            try:
+                switch_to_profile(driver)
+            except Exception:
+                pass
 
         # Kiểm tra Chrome còn sống trước mỗi fanpage
         driver, recovered = _try_recover(driver, f"trước fanpage {page_name}")
@@ -957,11 +1569,15 @@ def run_full_copyright_check(
                 _log(f"  ⏳ Chờ duyệt: {ap['title'][:60]}")
 
         # Quay về profile cá nhân chuẩn bị cho vòng quét tiếp theo
-        try:
-            switch_to_profile(driver)
-        except Exception as e:
-            if _is_chrome_error(e):
-                driver, _ = _try_recover(driver, "switch_to_profile sau fanpage")
+        # Bỏ qua nếu vòng tiếp theo sẽ proactive restart (tránh switch thừa)
+        _fanpage_count += 1
+        next_will_restart = (_fanpage_count % CHROME_RESTART_EVERY == 0)
+        if not next_will_restart:
+            try:
+                switch_to_profile(driver)
+            except Exception as e:
+                if _is_chrome_error(e):
+                    driver, _ = _try_recover(driver, "switch_to_profile sau fanpage")
 
     summary = f"Hoàn tất: {len(all_appeals)} vi phạm | Đã xóa: {deleted}"
     _log(summary)

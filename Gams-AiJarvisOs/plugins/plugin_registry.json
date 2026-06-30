@@ -14,6 +14,8 @@
         "gams_tiktok_downloader",
         "gams_youtube_downloader",
         "gams_tool_auto_bcgame",
-        "gams_fb_copyright_checker"
+        "gams_fb_copyright_checker",
+        "fake_test_tool__fix_proposal",
+        "bao_cao_facebook_ads"
     ]
 }

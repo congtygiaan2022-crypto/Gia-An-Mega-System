@@ -31,7 +31,11 @@ function getGlobalConfig() {
         delay_rand_all_max: document.getElementById('delay_rand_all_max').value,
         delay_rand_ind_min: document.getElementById('delay_rand_ind_min').value,
         delay_rand_ind_max: document.getElementById('delay_rand_ind_max').value,
-        delay_times: document.getElementById('delay_times').value.split(',').map(s => s.trim()).filter(s => s)
+        delay_times: document.getElementById('delay_times').value.split(',').map(s => s.trim()).filter(s => s),
+        gpt_limit_action: document.querySelector('input[name="gpt_limit_action"]:checked').value,
+        apply_gpt_limit_global: document.getElementById('apply_gpt_limit_global').checked,
+        apply_fb_global: document.getElementById('apply_fb_global').checked,
+        global_facebook_account: document.getElementById('global_facebook_account').value.trim()
     };
 }
 
@@ -81,6 +85,18 @@ async function loadGlobalConfig() {
         if (cfg.delay_rand_ind_min) document.getElementById('delay_rand_ind_min').value = cfg.delay_rand_ind_min;
         if (cfg.delay_rand_ind_max) document.getElementById('delay_rand_ind_max').value = cfg.delay_rand_ind_max;
         if (cfg.delay_times) document.getElementById('delay_times').value = cfg.delay_times.join(', ');
+        if (cfg.gpt_limit_action) {
+            document.querySelector(`input[name="gpt_limit_action"][value="${cfg.gpt_limit_action}"]`).checked = true;
+        }
+        if (cfg.apply_gpt_limit_global !== undefined) {
+            document.getElementById('apply_gpt_limit_global').checked = cfg.apply_gpt_limit_global;
+        }
+        if (cfg.apply_fb_global !== undefined) {
+            document.getElementById('apply_fb_global').checked = cfg.apply_fb_global;
+        }
+        if (cfg.global_facebook_account !== undefined) {
+            document.getElementById('global_facebook_account').value = cfg.global_facebook_account;
+        }
 
     } catch (e) {
         console.error("Lỗi khi tải cài đặt:", e);
@@ -257,10 +273,114 @@ async function openManualBrowser(profile) {
     }
 }
 
+async function createOrSwitchGPTAccount(profile) {
+    try {
+        const response = await fetch(`/api/gpt_register/${profile}`, { method: 'POST' });
+        const data = await response.json();
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert("Lỗi: " + data.message);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Lỗi kết nối Server!");
+    }
+}
+
 // Modal Logic
+function switchSettingsTab(tabId) {
+    // Remove active class from all buttons and tab contents
+    document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Add active class to clicked button and target tab content
+    const targetBtn = document.querySelector(`.modal-tab-btn[onclick*="${tabId}"]`);
+    if (targetBtn) {
+        targetBtn.classList.add('active');
+    }
+    const targetContent = document.getElementById(tabId);
+    if (targetContent) {
+        targetContent.classList.add('active');
+    }
+}
+
+function getFacebookAssetId(url) {
+    if (!url) return '';
+    try {
+        const u = new URL(url.trim());
+        // Trích xuất asset_id từ query parameters
+        let assetId = u.searchParams.get('asset_id');
+        if (assetId) return assetId;
+        
+        // Trích xuất page_id từ query parameters
+        let pageId = u.searchParams.get('page_id');
+        if (pageId) return pageId;
+        
+        // Trích xuất id từ query parameters (ví dụ: profile.php?id=...)
+        let idParam = u.searchParams.get('id');
+        if (idParam) return idParam;
+        
+        // Dự phòng: Lấy phần cuối cùng của đường dẫn
+        const segments = u.pathname.split('/').filter(s => s);
+        if (segments.length > 0) {
+            return segments[segments.length - 1];
+        }
+    } catch (e) {
+        // Nếu không phải URL hợp lệ, trả về chính chuỗi đó sau khi trim
+        return url.trim();
+    }
+    return url.trim();
+}
+
+function addFanpageInput(url = '') {
+    const container = document.getElementById('fanpage-urls-container');
+    if (!container) return;
+    
+    const row = document.createElement('div');
+    row.className = 'fanpage-url-row';
+    row.style.display = 'flex';
+    row.style.gap = '0.5rem';
+    row.style.alignItems = 'center';
+    row.style.marginBottom = '0.5rem';
+    
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'fanpage-url-input';
+    input.value = url;
+    input.placeholder = 'https://business.facebook.com/latest/composer/?asset_id=...';
+    input.style.flex = '1';
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'btn btn-stop';
+    removeBtn.innerHTML = '🗑️';
+    removeBtn.style.padding = '0.55rem';
+    removeBtn.style.minWidth = '40px';
+    removeBtn.style.flexShrink = '0';
+    removeBtn.style.background = 'rgba(244, 63, 94, 0.1)';
+    removeBtn.style.border = '1px solid rgba(244, 63, 94, 0.2)';
+    removeBtn.style.color = '#fda4af';
+    removeBtn.onclick = function() {
+        row.remove();
+    };
+    
+    row.appendChild(input);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+}
+
 async function openSettings(profile) {
     currentProfileEdit = profile;
     document.getElementById('modal-title').innerText = "Cài đặt: " + profile;
+    
+    // Default to first tab
+    switchSettingsTab('tab-general');
+    
     try {
         const response = await fetch(`/api/profile_config/${profile}`);
         const config = await response.json();
@@ -268,6 +388,10 @@ async function openSettings(profile) {
         const aiSource = config.ai_source || 'google';
         const aiSourceRadio = document.querySelector(`input[name="set_ai_source"][value="${aiSource}"]`);
         if (aiSourceRadio) aiSourceRadio.checked = true;
+
+        const gptLimitAction = config.gpt_limit_action || 'wait_limit';
+        const gptLimitRadio = document.querySelector(`input[name="set_gpt_limit_action"][value="${gptLimitAction}"]`);
+        if (gptLimitRadio) gptLimitRadio.checked = true;
         
         const isActive = config.is_active !== false;
         document.getElementById('set_is_active').checked = isActive;
@@ -279,7 +403,24 @@ async function openSettings(profile) {
         document.getElementById('set_prompt_img').value = config.prompt_img || '';
         document.getElementById('set_output_img_dir').value = config.output_img_dir || '';
         document.getElementById('set_fanpage_name').value = config.fanpage_name || '';
-        document.getElementById('set_fanpage_url').value = config.fanpage_url || '';
+        
+        // Render danh sách link Fanpage từ config
+        const container = document.getElementById('fanpage-urls-container');
+        if (container) {
+            container.innerHTML = '';
+            let urls = [];
+            if (config.fanpage_urls && Array.isArray(config.fanpage_urls)) {
+                urls = config.fanpage_urls;
+            } else if (config.fanpage_url) {
+                urls = config.fanpage_url.split(/[\n,]+/).map(u => u.trim()).filter(u => u);
+            }
+            
+            if (urls.length === 0) {
+                addFanpageInput('');
+            } else {
+                urls.forEach(url => addFanpageInput(url));
+            }
+        }
         
         document.getElementById('settings-modal').style.display = 'block';
     } catch (e) {
@@ -294,9 +435,38 @@ function closeSettings() {
 async function saveSettings() {
     if (!currentProfileEdit) return;
     
+    // Thu thập và kiểm tra trùng lặp các link Fanpage
+    const fanpageUrlInputs = document.querySelectorAll('.fanpage-url-input');
+    const fanpageUrls = [];
+    const seenAssetIds = {};
+    const duplicates = [];
+    let hasDuplicate = false;
+    
+    fanpageUrlInputs.forEach((input, index) => {
+        const url = input.value.trim();
+        if (!url) return;
+        fanpageUrls.push(url);
+        
+        const assetId = getFacebookAssetId(url);
+        if (assetId) {
+            if (seenAssetIds[assetId]) {
+                duplicates.push(`Ô nhập số ${index + 1} trùng với ô số ${seenAssetIds[assetId]} (Định danh/Asset ID: ${assetId})`);
+                hasDuplicate = true;
+            } else {
+                seenAssetIds[assetId] = index + 1;
+            }
+        }
+    });
+    
+    if (hasDuplicate) {
+        alert("⚠️ Phát hiện các Fanpage trùng lặp:\n" + duplicates.join("\n") + "\nVui lòng xóa hoặc chỉnh sửa các link bị trùng trước khi lưu.");
+        return;
+    }
+    
     const config = {
         is_active: document.getElementById('set_is_active').checked,
         ai_source: document.querySelector('input[name="set_ai_source"]:checked').value,
+        gpt_limit_action: document.querySelector('input[name="set_gpt_limit_action"]:checked').value,
         status_base: document.getElementById('set_status_base').value,
         prompt_base: document.getElementById('set_prompt_base').value,
         output_txt_dir: document.getElementById('set_output_txt_dir').value,
@@ -304,7 +474,8 @@ async function saveSettings() {
         prompt_img: document.getElementById('set_prompt_img').value,
         output_img_dir: document.getElementById('set_output_img_dir').value,
         fanpage_name: document.getElementById('set_fanpage_name').value,
-        fanpage_url: document.getElementById('set_fanpage_url').value,
+        fanpage_urls: fanpageUrls,
+        fanpage_url: fanpageUrls.join('\n')
     };
     
     try {
@@ -341,6 +512,22 @@ function applyStatusStyle(profile, status) {
     const badge = document.getElementById(`status-badge-${profile}`);
     if (!badge) return;
     
+    // Cập nhật chấm tròn trạng thái (indicator dot)
+    const indicator = document.getElementById(`indicator-${profile}`);
+    if (indicator) {
+        indicator.className = 'status-indicator-dot';
+        const s = status.toLowerCase();
+        if (s.includes('running') || status === "Running") {
+            indicator.classList.add('active-running');
+        } else if (s.includes('generating') || s.includes('ai')) {
+            indicator.classList.add('active-generating');
+        } else if (s.includes('posting') || s.includes('fanpage')) {
+            indicator.classList.add('active-posting');
+        } else {
+            indicator.classList.add('active-idle');
+        }
+    }
+    
     // Nếu status có chứa thời gian đếm ngược (VD: Wait: 00:05:30 hoặc Lỗi... (Wait: 00:05:30))
     const countdownSpan = document.getElementById(`countdown-${profile}`);
     if (status.includes("Wait:")) {
@@ -349,7 +536,10 @@ function applyStatusStyle(profile, status) {
         const parts = waitStr.split(":");
         if (parts.length >= 4) {
             const timeStr = parts.slice(1).join(":").replace(")", "").trim();
-            if(countdownSpan) countdownSpan.textContent = timeStr;
+            if(countdownSpan) {
+                countdownSpan.textContent = timeStr;
+                countdownSpan.style.display = 'inline-block';
+            }
             
             let badgeText = status.substring(0, idx).trim().replace("(", "").trim();
             if (!badgeText) {
@@ -366,7 +556,10 @@ function applyStatusStyle(profile, status) {
             return;
         }
     } else {
-        if(countdownSpan) countdownSpan.textContent = "";
+        if(countdownSpan) {
+            countdownSpan.textContent = "";
+            countdownSpan.style.display = 'none';
+        }
     }
     
     // Nếu không phải Wait
@@ -382,7 +575,7 @@ function applyStatusStyle(profile, status) {
         const s = status.toLowerCase();
         if (s.includes('idle') || s.includes('waiting')) badge.classList.add('status-idle');
         else if (s.includes('generating') || s.includes('ai') || s.includes('running')) badge.classList.add('status-generating');
-        else if (s.includes('posting') || s.includes('fanpage') || s.includes('hết hạn gpt') || s.includes('chờ thử lại')) badge.classList.add('status-posting');
+        else if (s.includes('posting') || s.includes('fanpage') || s.includes('hết hạn gpt') || s.includes('chờ thử lại') || s.includes('thử lại')) badge.classList.add('status-posting');
         else if (s.includes('stopping') || s.includes('missing')) badge.classList.add('status-stopping');
         else badge.classList.add('status-running');
     }
@@ -414,6 +607,136 @@ async function fetchStatus() {
     } catch (e) { console.error("Lỗi khi fetch status:", e); }
 }
 
+async function openFacebookModal(profile) {
+    currentProfileEdit = profile;
+    document.getElementById('facebook-modal-title').innerText = "Cài đặt Facebook: " + profile;
+    
+    try {
+        const response = await fetch(`/api/profile_config/${profile}`);
+        const config = await response.json();
+        
+        document.getElementById('set_facebook_account').value = config.facebook_account || '';
+        document.getElementById('facebook-modal').style.display = 'block';
+    } catch (e) {
+        console.error("Lỗi khi fetch config:", e);
+        alert("Lỗi khi tải cấu hình!");
+    }
+}
+
+function closeFacebookModal() {
+    document.getElementById('facebook-modal').style.display = 'none';
+}
+
+async function saveFacebookAccount() {
+    if (!currentProfileEdit) return;
+    
+    const fbAccount = document.getElementById('set_facebook_account').value.trim();
+    
+    try {
+        // Lấy cấu hình hiện tại để tránh bị ghi đè mất các trường khác
+        const getResponse = await fetch(`/api/profile_config/${currentProfileEdit}`);
+        const config = await getResponse.json() || {};
+        
+        config.facebook_account = fbAccount;
+        
+        const response = await fetch(`/api/profile_config/${currentProfileEdit}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        const data = await response.json();
+        if (data.success) {
+            alert("Đã lưu tài khoản Facebook thành công cho " + currentProfileEdit);
+            closeFacebookModal();
+        } else {
+            alert("Lỗi khi lưu tài khoản Facebook!");
+        }
+    } catch (e) {
+        console.error("Lỗi khi lưu tài khoản Facebook:", e);
+        alert("Lỗi khi lưu tài khoản Facebook!");
+    }
+}
+
+function toggleConsole(profile) {
+    const card = document.getElementById(`card-${profile}`);
+    if (!card) return;
+    const consoleWindow = card.querySelector('.console-window');
+    if (!consoleWindow) return;
+    
+    if (consoleWindow.style.display === 'none' || !consoleWindow.style.display) {
+        consoleWindow.style.display = 'block';
+        const consoleDiv = document.getElementById(`console-${profile}`);
+        if (consoleDiv) consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    } else {
+        consoleWindow.style.display = 'none';
+    }
+}
+
+// Global Controls Accordion Logic
+function toggleGlobalControls() {
+    const container = document.querySelector('.global-controls');
+    const arrow = document.getElementById('global-controls-arrow');
+    const body = document.getElementById('global-controls-body');
+    if (!container || !arrow || !body) return;
+    
+    const isCollapsed = container.classList.toggle('collapsed');
+    
+    if (isCollapsed) {
+        arrow.style.transform = 'rotate(-90deg)';
+        localStorage.setItem('global_controls_collapsed', 'true');
+    } else {
+        arrow.style.transform = 'rotate(0deg)';
+        localStorage.setItem('global_controls_collapsed', 'false');
+        body.style.maxHeight = '1000px';
+    }
+}
+
+function initGlobalControlsAccordion() {
+    const collapsed = localStorage.getItem('global_controls_collapsed');
+    const container = document.querySelector('.global-controls');
+    const arrow = document.getElementById('global-controls-arrow');
+    const body = document.getElementById('global-controls-body');
+    if (!container || !arrow || !body) return;
+    
+    if (collapsed === 'true') {
+        container.classList.add('collapsed');
+        arrow.style.transform = 'rotate(-90deg)';
+    } else {
+        body.style.maxHeight = '1000px';
+    }
+}
+
+// Card Profile Toolbar Dropdown Logic
+function toggleDropdown(profile) {
+    // Ngăn chặn sự kiện click lan ra ngoài
+    if (window.event) {
+        window.event.stopPropagation();
+    }
+    
+    // Đóng toàn bộ các dropdown khác
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        if (menu.id !== `dropdown-${profile}`) {
+            menu.classList.remove('show');
+        }
+    });
+    
+    const menu = document.getElementById(`dropdown-${profile}`);
+    if (menu) {
+        menu.classList.toggle('show');
+    }
+}
+
+// Tự động đóng dropdown khi click bất cứ đâu ngoài menu
+document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.classList.remove('show');
+    });
+});
+
 setInterval(fetchStatus, 2000);
 fetchStatus();
 loadGlobalConfig();
+
+document.addEventListener('DOMContentLoaded', () => {
+    initGlobalControlsAccordion();
+});

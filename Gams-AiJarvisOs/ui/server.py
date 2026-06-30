@@ -1,8 +1,17 @@
 import sys
 if sys.platform == "win32":
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except AttributeError:
+        try:
+            import io
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+    except Exception:
+        pass
 
 from fastapi import FastAPI, BackgroundTasks, HTTPException, Query
 from pydantic import BaseModel
@@ -101,6 +110,14 @@ def startup_event():
     except Exception as e:
         print(f"FastAPI: Error starting bridge: {e}")
 
+    # 1b. Khởi động Worker (để bắt lỗi từ requests.json của Isolated Runner)
+    try:
+        from core.antigravity_worker import start_worker
+        start_worker()
+        print("FastAPI: Antigravity Worker started.")
+    except Exception as e:
+        print(f"FastAPI: Error starting worker: {e}")
+
     # 2. Khởi động Scheduler (chỉ nếu chưa chạy)
     try:
         from core.scheduler import global_scheduler
@@ -150,7 +167,7 @@ async def run_task(task: str):
         return {"result": result, "task_id": None}
     
 @app.get("/tasks")
-def get_tasks():
+def get_active_tasks():
     from core.task_queue import global_task_queue
     return global_task_queue.get_all_tasks()
 
@@ -161,7 +178,7 @@ def cleanup_tasks():
     return {"message": f"Đã dọn dẹp {count} tiến trình đã kết thúc.", "count": count}
 
 @app.delete("/task/{task_id}")
-def delete_task(task_id: str):
+def delete_active_task(task_id: str):
     from core.task_queue import global_task_queue
     if global_task_queue.delete_task(task_id):
         return {"message": "Đã xóa tiến trình."}
@@ -197,7 +214,7 @@ def restart_server():
     import time
     try:
         def do_restart():
-            time.sleep(1.0) # Let uvicorn send response first
+            time.sleep(2.0) # Let uvicorn send response first
             print("\nServer: Restarting system (exiting with code 99)...")
             sys.stdout.flush()
             sys.stderr.flush()
@@ -208,20 +225,7 @@ def restart_server():
     except Exception as e:
         return {"error": f"Lỗi khởi động lại: {str(e)}"}
 
-@app.post("/shutdown")
-def shutdown_server():
-    """
-    Shuts down the server process.
-    """
-    import os
-    import signal
-    print("FastAPI: Nhận yêu cầu TẮT hệ thống...")
-    try:
-        # Send SIGTERM to the current process
-        os.kill(os.getpid(), signal.SIGTERM)
-        return {"message": "Hệ thống đang được tắt..."}
-    except Exception as e:
-        return {"error": f"Lỗi khi tắt hệ thống: {str(e)}"}
+# Duplicate shutdown endpoint removed (the main shutdown endpoint is defined at the bottom of the file)
 
 @app.get("/settings")
 def get_settings():
@@ -404,7 +408,7 @@ from core.log_manager import LogManager
 from core.scheduler import global_scheduler
 
 @app.get("/scheduler/tasks")
-def get_tasks():
+def get_scheduler_tasks():
     tm = TaskManager()
     return tm.get_all_tasks()
 
@@ -420,7 +424,7 @@ def save_task(task: TaskModel):
     return {"message": "Đã lưu tác vụ thành công"}
 
 @app.delete("/scheduler/tasks/{task_id}")
-def delete_task(task_id: str):
+def delete_scheduler_task(task_id: str):
     tm = TaskManager()
     tm.delete_task(task_id)
     global_scheduler.reload_jobs()
@@ -1134,7 +1138,7 @@ def shutdown_server():
     Safely shuts down the Jarvis python processes without killing the OS terminal.
     """
     def kill_him():
-        time.sleep(1) # Chờ một chút để trả về phản hồi cho UI
+        time.sleep(2.0) # Chờ một chút để trả về phản hồi cho UI
         try:
             if os.name == 'nt':
                 import subprocess

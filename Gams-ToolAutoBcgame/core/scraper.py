@@ -274,7 +274,7 @@ class BCGameScraper:
             self._log(f"❌ Lỗi click trận: {str(e)}", "ERROR")
         return False
 
-    def search_match(self, home: str, away: str) -> List[Match]:
+    def search_match(self, home: str, away: str, is_running_cb: Optional[Callable[[], bool]] = None) -> List[Match]:
         """Tìm kiếm trận đấu với cơ chế dự phòng và tối ưu hóa tốc độ tìm kiếm"""
         from core.selector import MatchSelector, normalize_name
         selector = MatchSelector()
@@ -317,6 +317,10 @@ class BCGameScraper:
         found_ids = set()
 
         for query in unique_queries:
+            if is_running_cb and not is_running_cb():
+                self._log("🛑 Dừng tìm kiếm do hệ thống Auto đã dừng.")
+                break
+                
             self._log(f"🔍 Đang tìm kiếm với từ khóa: '{query}'...")
             try:
                 # Tìm ô input search trên trang hiện tại
@@ -357,6 +361,8 @@ class BCGameScraper:
                     
                     # Cuộn nhẹ để load kết quả
                     for scroll_idx in range(3):
+                        if is_running_cb and not is_running_cb():
+                            break
                         self.browser.driver.execute_script("window.scrollBy(0, 300);")
                         time.sleep(1.0)
                         

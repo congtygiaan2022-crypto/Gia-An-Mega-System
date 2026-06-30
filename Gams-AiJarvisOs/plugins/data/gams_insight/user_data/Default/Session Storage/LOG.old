@@ -1,3 +1,5 @@
-2026/06/02-04:12:13.251 5e14 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Session Storage/MANIFEST-000001
-2026/06/02-04:12:13.253 5e14 Recovering log #45
-2026/06/02-04:12:13.256 5e14 Reusing old log E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Session Storage/000045.log 
+2026/06/30-07:48:19.617 5ab8 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Session Storage/MANIFEST-000001
+2026/06/30-07:48:19.619 5ab8 Recovering log #130
+2026/06/30-07:48:19.620 5ab8 Level-0 table #133: started
+2026/06/30-07:48:19.627 5ab8 Level-0 table #133: 13132 bytes OK
+2026/06/30-07:48:19.632 5ab8 Delete type=0 #130

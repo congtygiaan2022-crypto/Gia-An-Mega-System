@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Reup Insta and X tự động</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="background-blobs">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+    
+    <div class="container">
+        <header>
+            <h1><span class="gradient-text">Tool Reup</span> Insta and X tự động</h1>
+            <p>Hệ thống tự động quét bài viết từ Instagram & X, làm mới nội dung qua AI và đăng bài lên Facebook Fanpage</p>
+        </header>
+
+        <!-- GLOBAL CONTROLS -->
+        <div class="global-controls glassmorphism">
+            <div class="global-controls-header" onclick="toggleGlobalControls()" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem; transition: border-color 0.3s;">
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.5rem; margin: 0;">⚙️ CẤU HÌNH HỆ THỐNG CHUNG</h2>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span id="global-status-summary" style="font-size: 0.78rem; color: var(--text-secondary); font-weight: 500;"></span>
+                    <span id="global-controls-arrow" style="font-size: 0.9rem; color: var(--text-secondary); transition: transform 0.3s;">▼</span>
+                </div>
+            </div>
+            
+            <div id="global-controls-body" style="transition: all 0.3s ease; overflow: hidden; margin-top: 1.25rem;">
+                <!-- Controls Configuration Grid (4 columns) -->
+                <div class="controls-config-grid">
+                    <!-- Hệ thống & Số luồng -->
+                    <div class="control-group" style="grid-column: span 2;">
+                        <h3>⚡ Cấu hình Hệ thống & Vòng chạy</h3>
+                        <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                            <label style="font-weight: 500; border: none; background: none; padding: 0; color: #fff;">
+                                Số luồng chạy song song tối đa:
+                                <input type="number" id="max_threads" value="3" min="1" style="width:60px; margin-left: 5px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; border-radius: 4px;">
+                            </label>
+                            
+                            <label style="font-weight: 500; border: none; background: none; padding: 0; color: #fff;">
+                                Số giây nghỉ giữa các lần quét:
+                                <input type="number" id="delay_fixed" value="300" min="0" style="width:70px; margin-left: 5px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; border-radius: 4px;">
+                            </label>
+                        </div>
+                        
+                        <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+                            <span style="font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.8);">Chế độ chạy lặp lại:</span>
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; border: none; padding: 0; background: none;">
+                                    <input type="radio" name="loop_type" value="infinite" checked style="cursor: pointer; transform: scale(1.1);"> Vô hạn (Quét liên tục)
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; border: none; padding: 0; background: none;">
+                                    <input type="radio" name="loop_type" value="n" style="cursor: pointer; transform: scale(1.1);"> Số lần cố định:
+                                </label>
+                                <input type="number" id="loop_count" value="1" min="1" style="width:50px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 4px 8px; border-radius: 4px;">
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #f59e0b; cursor: pointer; border: none; padding: 0; background: none;">
+                                <input type="checkbox" id="only_scrape_no_post" style="transform: scale(1.2); cursor: pointer;">
+                                🧪 Chế độ TEST: Chỉ quét & tải media (KHÔNG đăng lên Facebook)
+                            </label>
+                        </div>
+                        
+                        <!-- Các cấu hình phụ nâng cao ẩn đi để tránh rác UI -->
+                        <div style="display: none;">
+                            <input type="radio" name="delay_type" value="fixed" checked>
+                            <input type="number" id="delay_rand_all_min" value="0">
+                            <input type="number" id="delay_rand_all_max" value="0">
+                            <input type="number" id="delay_rand_ind_min" value="0">
+                            <input type="number" id="delay_rand_ind_max" value="0">
+                            <input type="text" id="delay_times" value="">
+                        </div>
+                    </div>
+
+                    <!-- Hành vi khi hết hạn GPT -->
+                    <div class="control-group">
+                        <h3>🤖 Hạn mức ChatGPT (Limit)</h3>
+                        <label class="toggle-global-label">
+                            <input type="checkbox" id="apply_gpt_limit_global" checked>
+                            <span>Áp dụng cho tất cả Profile</span>
+                            <span class="toggle-hint">(Bật = dùng cài đặt chung, Tắt = dùng riêng từng profile)</span>
+                        </label>
+                        <div class="radio-group" style="margin-top: 8px;">
+                            <label><input type="radio" name="gpt_limit_action" value="change_account"> Đổi tài khoản GPT mới (Tự động đăng ký)</label>
+                            <label><input type="radio" name="gpt_limit_action" value="wait_limit" checked> Không đổi tài khoản (Chờ hết hạn)</label>
+                        </div>
+                    </div>
+
+                    <!-- Cấu hình Facebook Chung -->
+                    <div class="control-group" style="grid-column: span 2;">
+                        <h3>📘 Tài khoản Facebook chung</h3>
+                        <label class="toggle-global-label">
+                            <input type="checkbox" id="apply_fb_global">
+                            <span>Áp dụng cho tất cả Profile</span>
+                            <span class="toggle-hint">(Bật = dùng tài khoản chung, Tắt = dùng tài khoản riêng)</span>
+                        </label>
+                        <div style="margin-top: 8px;">
+                            <textarea id="global_facebook_account" placeholder="UID|Pass|2FA|Mail" rows="2" style="width: 100%; box-sizing: border-box; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; padding: 8px 10px; border-radius: 6px; font-family: monospace; font-size: 0.82rem; resize: none;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- System Actions Bar (Horizontal layout) -->
+                <div class="controls-actions-bar">
+                    <div class="actions-left">
+                        <button class="btn btn-save" onclick="saveGlobalConfig()">💾 Lưu Cài Đặt</button>
+                        <button class="btn btn-start-all" onclick="startAll()">🚀 Start All Profiles</button>
+                        <button class="btn btn-stop-all" onclick="stopAll()">🛑 Stop All Profiles</button>
+                        <button class="btn btn-clear-logs" onclick="clearAllLogs()">🧹 Xóa Sạch Logs</button>
+                    </div>
+                    <div class="actions-divider"></div>
+                    <div class="actions-right">
+                        <button class="btn btn-force-stop" onclick="forceStopTool()">🛑 Stop Server</button>
+                        <button class="btn btn-restart" onclick="restartTool()">🔄 Restart Server</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <main class="grid">
+            <!-- Tiêu đề & Nút Add Profile -->
+            <div style="grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem; width: 100%;">
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 1.35rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 0.5rem;">📋 Danh sách Profiles Chrome</h2>
+                <button class="btn btn-start-all" onclick="createProfile()" style="max-width: 200px; padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px;">➕ THÊM PROFILE MỚI</button>
+            </div>
+            {% for profile in profiles %}
+            <div class="card glassmorphism" id="card-{{ profile }}">
+                <!-- Row 1: Profile name + Status -->
+                <div class="card-top-row">
+                    <h2 class="card-profile-name" onclick="toggleConsole('{{ profile }}')" style="cursor: pointer;" title="Nhấp để xem logs">
+                        <span class="status-indicator-dot active-idle" id="indicator-{{ profile }}"></span>
+                        {{ profile }}
+                    </h2>
+                    <div class="card-status-area">
+                        <span class="status-badge status-idle" id="status-badge-{{ profile }}">Idle</span>
+                        <span id="countdown-{{ profile }}" style="display: none;"></span>
+                    </div>
+                </div>
+                
+                <!-- Row 2: Compact toolbar containing all actions -->
+                <div class="card-toolbar">
+                    <button class="toolbar-btn toolbar-btn-primary" onclick="startProfile('{{ profile }}')" title="Start Auto Run"><span class="toolbar-icon" style="color: var(--success)">▶</span><span class="toolbar-label">Start</span></button>
+                    <button class="toolbar-btn toolbar-btn-danger" onclick="stopProfile('{{ profile }}')" title="Stop Run"><span class="toolbar-icon" style="color: var(--danger)">⏹</span><span class="toolbar-label">Stop</span></button>
+                    <button class="toolbar-btn" onclick="openManualBrowser('{{ profile }}')" title="Mở trình duyệt thủ công"><span class="toolbar-icon">🌐</span><span class="toolbar-label">Browser</span></button>
+                    <!-- Dropdown Logs -->
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle" onclick="toggleLogDropdown('{{ profile }}')" title="Xem/Sao chép logs"><span class="toolbar-icon">📝</span><span class="toolbar-label">Logs</span></button>
+                        <div class="dropdown-menu" id="log-dropdown-{{ profile }}">
+                            <a onclick="copyProfileLog('{{ profile }}')">📋 Copy Logs</a>
+                            <a onclick="toggleConsole('{{ profile }}')">👁️ Ẩn/Hiện Logs</a>
+                        </div>
+                    </div>
+                    
+                    <!-- Dropdown Options -->
+                    <div class="dropdown">
+                        <button class="toolbar-btn dropdown-toggle" onclick="toggleDropdown('{{ profile }}')" title="Cài đặt Profile"><span class="toolbar-icon">⚙️</span><span class="toolbar-label">Cài đặt</span></button>
+                        <div class="dropdown-menu" id="dropdown-{{ profile }}">
+                            <a onclick="openSettings('{{ profile }}')">⚙️ Cài đặt Profile</a>
+                            <a onclick="openFacebookModal('{{ profile }}')">📘 Cấu hình FB</a>
+                            <a onclick="createOrSwitchGPTAccount('{{ profile }}')">🤖 Đổi tài khoản GPT</a>
+                            <a onclick="renameProfile('{{ profile }}')">✏️ Đổi tên Profile</a>
+                            <div class="dropdown-divider"></div>
+                            <a onclick="deleteProfile('{{ profile }}')" class="text-danger">🗑️ Xóa Profile</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Row 3: Collapsible Console Window -->
+                <div class="console-window">
+                    <div class="console-header">
+                        <div class="console-dots">
+                            <span class="console-dot red"></span>
+                            <span class="console-dot yellow"></span>
+                            <span class="console-dot green"></span>
+                        </div>
+                        <div class="console-title">Console log</div>
+                        <span style="font-size: 0.65rem; color: var(--text-secondary); cursor: pointer; opacity: 0.7; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7" onclick="clearProfileLog('{{ profile }}')">🧹 Dọn log</span>
+                    </div>
+                    <div class="console" id="console-{{ profile }}">
+                        <ul id="log-list-{{ profile }}">
+                            <li>[Chờ khởi động...]</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </main>
+    </div>
+
+    <!-- SETTINGS MODAL -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">Cài đặt Profile</h2>
+                <span class="close" onclick="closeSettings()">&times;</span>
+            </div>
+            
+            <!-- Modal Tabs Navigation -->
+            <div class="modal-tabs">
+                <button type="button" class="modal-tab-btn active" onclick="switchSettingsTab('tab-general')">⚙️ Cơ bản & Fanpage</button>
+                <button type="button" class="modal-tab-btn" onclick="switchSettingsTab('tab-text')">📝 Cấu hình Text</button>
+                <button type="button" class="modal-tab-btn" onclick="switchSettingsTab('tab-image')">🎨 Ảnh & Nền tảng AI</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="settings-form">
+                    <!-- Tab 1: General Settings -->
+                    <div id="tab-general" class="tab-content active">
+                        <div class="form-section">
+                            <label style="font-weight: bold; color: #10b981; margin-bottom: 1.25rem; display: block; font-size: 1.05rem; cursor: pointer;">
+                                <input type="checkbox" id="set_is_active" style="transform: scale(1.3); margin-right: 0.6rem; cursor: pointer;"> 
+                                Trạng thái: Đang hoạt động (Kích hoạt để chạy Auto)
+                            </label>
+                            <h4>🌐 Nguồn bài viết & Đăng bài (Fanpage)</h4>
+                            <label>Tên Fanpage (Ghi nhớ):</label>
+                            <input type="text" id="set_fanpage_name" placeholder="Tên fanpage để dễ nhớ">
+                            <label>Danh sách link Fanpage đăng bài (Đích):</label>
+                            <div id="fanpage-urls-container" style="display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 0.75rem;">
+                                <!-- Sẽ được sinh động bằng JS -->
+                            </div>
+                            <button type="button" class="btn btn-save" onclick="addFanpageInput('')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; margin-bottom: 1.25rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%); width: fit-content;">➕ Thêm Fanpage</button>
+                            
+                            <label>Danh sách link Instagram nguồn (mỗi dòng 1 link):</label>
+                            <textarea id="set_instagram_urls" rows="3" placeholder="Ví dụ: https://www.instagram.com/cristiano/" style="width: 100%; margin-bottom: 1.25rem; box-sizing: border-box;"></textarea>
+                            
+                            <label>Danh sách link X / Twitter nguồn (mỗi dòng 1 link):</label>
+                            <textarea id="set_x_urls" rows="3" placeholder="Ví dụ: https://x.com/elonmusk" style="width: 100%; margin-bottom: 1.25rem; box-sizing: border-box;"></textarea>
+                            
+                            <label>Danh sách link Threads nguồn (mỗi dòng 1 link):</label>
+                            <textarea id="set_threads_urls" rows="3" placeholder="Ví dụ: https://www.threads.net/@zuck" style="width: 100%; margin-bottom: 1.25rem; box-sizing: border-box;"></textarea>
+                            
+                            <label>Số bài viết mới nhất cần quét trên mỗi nguồn (Instagram/X/Threads):</label>
+                            <input type="number" id="set_scan_limit" placeholder="Mặc định: 10 (Chỉ tìm trong số lượng bài này để tránh bài viết quá cũ)" min="1" max="50" style="width: 100%; box-sizing: border-box; margin-bottom: 1.25rem;">
+
+                            <label>Giờ quét bài viết mới (Scan Times - ví dụ: 08:00, 12:00, 18:00):</label>
+                            <input type="text" id="set_scan_times" placeholder="08:00, 12:00, 18:00" style="width: 100%; box-sizing: border-box;">
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Text Config -->
+                    <div id="tab-text" class="tab-content">
+                        <div class="form-section">
+                            <h4>📝 Cấu hình Text (AI Status)</h4>
+                            <label>Status bổ sung / Định dạng mẫu:</label>
+                            <textarea id="set_status_base" rows="4" placeholder="Nhập thêm hashtag hoặc chữ ký mẫu để chèn vào status sau khi rewrite..."></textarea>
+                            <label>Prompt viết lại status (Dựa trên status gốc):</label>
+                            <textarea id="set_prompt_base" rows="4" placeholder="Ví dụ: Hãy dịch và viết lại đoạn văn này bằng tiếng Việt, giọng điệu vui vẻ, thêm hashtag phù hợp..."></textarea>
+                            <label>Thư mục lưu Text tạm thời (Output Text):</label>
+                            <input type="text" id="set_output_txt_dir" placeholder="Ví dụ: E:\Output\Text">
+                        </div>
+                    </div>
+
+                    <!-- Tab 3: Image / AI Config -->
+                    <div id="tab-image" class="tab-content">
+                        <div class="form-section">
+                            <h4>🖼 Cấu hình Ảnh & AI</h4>
+                            <label>Nền tảng tạo Ảnh/Text:</label>
+                            <div class="radio-group" style="flex-direction: row; margin-bottom: 1rem; gap: 0.75rem;">
+                                <label><input type="radio" name="set_ai_source" value="google"> Google AI Studio</label>
+                                <label><input type="radio" name="set_ai_source" value="chatgpt"> ChatGPT</label>
+                            </div>
+                            
+                            <label>Cách xử lý khi GPT bị Limit (Chỉ áp dụng khi chọn ChatGPT):</label>
+                            <div class="radio-group" style="flex-direction: row; margin-bottom: 1.25rem; gap: 0.75rem;">
+                                <label><input type="radio" name="set_gpt_limit_action" value="change_account"> Đổi tài khoản GPT mới</label>
+                                <label><input type="radio" name="set_gpt_limit_action" value="wait_limit"> Không đổi tài khoản (Chờ)</label>
+                            </div>
+                            
+                            <label>Thư mục tải ảnh/video gốc tạm thời (Original Media Temp):</label>
+                            <input type="text" id="set_input_img_dir" placeholder="Ví dụ: E:\Input\ScrapedMedia">
+                            <label>Prompt vẽ lại ảnh (Dựa trên ảnh gốc):</label>
+                            <textarea id="set_prompt_img" rows="4" placeholder="Ví dụ: Hãy vẽ lại ảnh này theo phong cách anime rực rỡ, độ phân giải cao..."></textarea>
+                            <label>Thư mục lưu Ảnh kết quả (Output Image):</label>
+                            <input type="text" id="set_output_img_dir" placeholder="Ví dụ: E:\Output\Images">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-stop" onclick="closeSettings()">Hủy</button>
+                <button class="btn btn-start" onclick="saveSettings()">💾 Lưu Cài Đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FACEBOOK MODAL -->
+    <div id="facebook-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="facebook-modal-title">Cấu hình Tài khoản Facebook</h2>
+                <span class="close" onclick="closeFacebookModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="form-section">
+                    <h4>📘 Tài khoản Facebook đăng nhập</h4>
+                    <p style="font-size: 0.85rem; color: rgba(255,255,255,0.6); margin-bottom: 1rem;">
+                         Nhập thông tin tài khoản Facebook để tự động đăng nhập khi chạy tác vụ.<br>
+                         Định dạng yêu cầu: <strong>UID|Pass|2FA|Mail</strong>
+                    </p>
+                    <label>Thông tin tài khoản Facebook:</label>
+                    <textarea id="set_facebook_account" rows="3" placeholder="Ví dụ: 100012345678|MatKhau123|JBSWY3DPEHPK3PXP|mail@gmail.com" style="width: 100%; box-sizing: border-box;"></textarea>
+                    <p style="font-size: 0.85rem; color: #f59e0b; margin-top: 0.5rem;">
+                         💡 Chú ý: Đảm bảo điền đúng định dạng có dấu gạch đứng (|) phân tách giữa các trường thông tin. Nếu không có Mail, bạn vẫn có thể điền: UID|Pass|2FA
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-stop" onclick="closeFacebookModal()">Hủy</button>
+                <button class="btn btn-start" onclick="saveFacebookAccount()">💾 Lưu tài khoản</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

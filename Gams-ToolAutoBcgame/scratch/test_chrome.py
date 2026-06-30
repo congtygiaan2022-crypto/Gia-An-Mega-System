@@ -21,6 +21,7 @@ try:
     driver = uc.Chrome(
         options=options,
         browser_executable_path=portable_chrome,
+        version_main=124,
         user_data_dir=profile_dir,
         use_subprocess=True
     )

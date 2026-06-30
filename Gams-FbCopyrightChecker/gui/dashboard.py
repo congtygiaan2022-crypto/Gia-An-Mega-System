@@ -879,7 +879,7 @@ class LogsPage(ctk.CTkFrame):
         self.box.pack(fill="both", expand=True, padx=28, pady=4)
 
     def append(self, msg: str):
-        ts = time.strftime("%H:%M:%S")
+        ts = time.strftime("%Y-%m-%d %H:%M:%S")
         self.box.configure(state="normal")
         self.box.insert("end", f"[{ts}] {msg}\n")
         self.box.see("end")
@@ -1269,7 +1269,42 @@ class App(ctk.CTk):
         return 0
 
     def _prepare_checker(self):
-        if not self._need_driver("kiểm tra bản quyền"): return False
+        # Nếu driver đang chạy bình thường → tiếp tục
+        if self.driver:
+            try:
+                _ = self.driver.current_window_handle  # kiểm tra driver còn sống
+                self.stop_checker_event.clear()
+                self.pages["checker"].set_running(True)
+                self.pages["checker"].clear()
+                return True
+            except Exception:
+                self.driver = None  # driver chết → reset
+
+        # Driver là None (bị đóng sau vòng quét hoặc chưa đăng nhập)
+        # Kiểm tra xem có credentials để mở lại Chrome không
+        has_creds = False
+        if self.active_acc_idx >= 0:
+            try:
+                from modules.account_manager import get_manager
+                acc = get_manager().get(self.active_acc_idx)
+                has_creds = bool(acc and acc.email and acc.password)
+            except Exception:
+                pass
+        else:
+            try:
+                creds = self.pages["login"].get_creds()
+                has_creds = bool(creds and creds.get("email") and creds.get("password"))
+            except Exception:
+                pass
+
+        if not has_creds:
+            # Thực sự chưa có credentials nào
+            from tkinter import messagebox
+            messagebox.showwarning("Chưa đăng nhập",
+                "Hãy đăng nhập tài khoản trước khi kiểm tra bản quyền.")
+            return False
+
+        # Có credentials → cho phép chạy, _ensure_driver_ready() sẽ mở Chrome lại
         self.stop_checker_event.clear()
         self.pages["checker"].set_running(True)
         self.pages["checker"].clear()
@@ -1365,6 +1400,16 @@ class App(ctk.CTk):
 
     def _checker_thread(self, auto_delete: bool, pages_to_scan: list, max_loops: int = 1):
         db = None
+        uid = self.profile_data.get("uid", "") or (f"acc_{self.active_acc_idx}" if self.active_acc_idx >= 0 else "quick")
+        lock_name = f"checker_{uid}"
+        from modules.lock_manager import acquire_lock, release_lock
+        
+        if not acquire_lock(lock_name):
+            self._log(f"⚠ LỖI: Tài khoản '{self.profile_data.get('name', uid)}' đang được quét bởi tiến trình khác.")
+            self._q.put({"kind": "checker_log", "text": "Không thể chạy quét trùng lặp. Đã dừng."})
+            self._q.put({"kind": "checker_done", "kind_done": True, "result": {"total_appeals": 0, "deleted": 0, "details": []}})
+            return
+
         try:
             from modules.copyright_checker import run_full_copyright_check
             from modules.database import Database
@@ -1456,6 +1501,10 @@ class App(ctk.CTk):
         finally:
             if db:
                 db.close()
+            try:
+                release_lock(lock_name)
+            except Exception:
+                pass
 
     def _on_checker_loop_done(self, msg: dict):
         r = msg["result"]

@@ -229,3 +229,66 @@ Stacktrace:
 	ntdll!RtlGetAppContainerNamedObjectPath [0x774c840e+ee]`
 - **Ghi chú sửa lỗi**: Thay doi use_subprocess=True va loc trung lap chrome process bang psutil
 ---
+
+## ✅ [BUG_20260604_002417_001] — main  `ĐÃ SỬA`
+- **Thời gian phát hiện**: `2026-06-04 00:24:17`
+- **Thời gian sửa**: `2026-06-04 00:26:53`
+- **Module**: `gui.main_window`
+- **Loại lỗi**: `NameError`
+- **Thông báo lỗi**: `name 'selftitle' is not defined`
+- **Ghi chú sửa lỗi**: Đã đổi lệnh gọi `selftitle(...)` thành `self.title(...)` trong khởi tạo MainWindow của file [main_window.py](file:///e:/Gams-ToolAutoBcgame/gui/main_window.py#L28).
+---
+
+## ✅ [BUG_20260604_013357_001] — start  `ĐÃ SỬA`
+- **Thời gian phát hiện**: `2026-06-04 01:33:57`
+- **Thời gian sửa**: `2026-06-04 01:39:18`
+- **Module**: `core.browser`
+- **Loại lỗi**: `SessionNotCreatedException`
+- **Thông báo lỗi**: `Message: session not created: cannot connect to chrome at 127.0.0.1:59989`
+- **Ghi chú sửa lỗi**:
+  1. Tải và cài đặt bản Chrome portable v124 bằng cách chạy lại `download_chrome.py`.
+  2. Sửa [browser.py](file:///e:/Gams-ToolAutoBcgame/core/browser.py#L101-L122) để tự động phát hiện và ưu tiên chạy bản Chrome portable v124 với `version_main=124` nếu tồn tại, tránh xung đột phiên bản Chrome hệ thống (v148/v149).
+  3. Đổi tên thư mục profile cũ `chrome_profile_v2` sang `chrome_profile_v2_old` vì nó đã bị ghi đè dữ liệu không tương thích ngược bởi Chrome hệ thống bản mới (v148). Khi chạy lại, Chrome v124 sẽ khởi tạo profile mới hoàn toàn sạch sẽ.
+---
+
+## ✅ [BUG_20260604_013838_001] — start  `ĐÃ SỬA`
+- **Thời gian phát hiện**: `2026-06-04 01:38:38`
+- **Thời gian sửa**: `2026-06-04 01:39:23`
+- **Module**: `core.browser`
+- **Loại lỗi**: `WebDriverException`
+- **Thông báo lỗi**: `Message: unknown error: cannot connect to chrome` (Do lỗi kẹt profile không tương thích ngược ở trên)
+- **Ghi chú sửa lỗi**: Tương tự như sửa đổi ở trên, việc dọn dẹp và reset profile `chrome_profile_v2` đã giải quyết triệt để lỗi kết nối này.
+---
+
+## ✅ [BUG_20260604_014142_001] — auto_bet  `ĐÃ SỬA`
+- **Thời gian phát hiện**: `2026-06-04 01:41:42`
+- **Thời gian sửa**: `2026-06-04 01:42:18`
+- **Module**: `gui.main_window`
+- **Loại lỗi**: `NoSuchWindowException`
+- **Thông báo lỗi**: `Message: no such window: target window already closed`
+- **Ghi chú sửa lỗi**:
+  1. Thêm phương thức `check_alive()` vào [browser.py](file:///e:/Gams-ToolAutoBcgame/core/browser.py#L178-L195) để kiểm tra xem cửa sổ Chrome có đang mở và kết nối driver còn sống hay không.
+  2. Tích hợp `check_alive()` vào các luồng cược tự động, theo dõi kết quả và báo cáo trong [main_window.py](file:///e:/Gams-ToolAutoBcgame/gui/main_window.py). Nếu phát hiện cửa sổ Chrome bị đóng (do người dùng tắt thủ công hoặc crash), luồng cược/care sẽ tự động dừng lại và hiển thị cảnh báo thay vì chạy lặp vô hạn gây spam log lỗi.
+---
+
+## ✅ [BUG_20260607_231257_001] — clear_bet_slip  `ĐÃ SỬA`
+- **Thời gian phát hiện**: `2026-06-07 23:12:57`
+- **Thời gian sửa**: `2026-06-07 23:18:43`
+- **Module**: `core.bettor`
+- **Loại lỗi**: `LogicError`
+- **Thông báo lỗi**: Phiếu cược cũ chứa kèo không hợp lệ (Odds ngoài khoảng) không được xóa sạch, dẫn đến việc đặt cược xiên 2 trận ở vòng tiếp theo.
+- **Ghi chú sửa lỗi**:
+  - Viết lại hàm `clearAll()` trong `clear_bet_slip` của [bettor.py](file:///e:/Gams-ToolAutoBcgame/core/bettor.py#L149-L215) để tìm kiếm nút "Xóa tất cả" / "Clear all" trực tiếp trong toàn bộ Shadow DOM mà không phụ thuộc vào chuỗi ký tự lọc `" vs "` không ổn định.
+  - Thêm phương pháp dự phòng tự động quét và nhấn từng nút Đóng (dấu X) đơn lẻ nếu không thấy nút xóa tất cả.
+---
+
+## ✅ [BUG_20260607_231257_002] — place_bet  `ĐÃ SỬA`
+- **Thời gian phát hiện**: `2026-06-07 23:12:57`
+- **Thời gian sửa**: `2026-06-07 23:18:27`
+- **Module**: `core.bettor`
+- **Loại lỗi**: `UIBindingError`
+- **Thông báo lỗi**: Nhận diện đúng số tiền cược nhưng không điền được vào ô cược thực tế trên giao diện BCGame.
+- **Ghi chú sửa lỗi**:
+  - Khắc phục việc bộ chọn nhắm nhầm vào các thẻ `div` bọc ngoài có class chứa "stake" bằng cách lọc chặt chẽ chỉ lấy phần tử `<input>` thực sự trong `_find_bet_elements()` của [bettor.py](file:///e:/Gams-ToolAutoBcgame/core/bettor.py#L216-L270).
+  - Sử dụng cơ chế Native Input Setter (`Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set`) để gán giá trị cược giúp vượt qua cơ chế ảo hóa State của các framework hiện đại (React/Vue/Svelte), đồng thời dispatch đầy đủ các sự kiện `input`, `change`, và `blur`.
+---

@@ -386,14 +386,53 @@ async def baocaofanpage_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     def parse_metric(text):
         if not text or not isinstance(text, str): return 0.0
-        val_str = text.split('(')[0].strip().upper()
+        import re
+        val_str = text.split('(')[0].strip().lower()
+        
         multiplier = 1.0
-        if 'M' in val_str: multiplier = 1_000_000.0; val_str = val_str.replace('M', '')
-        elif 'K' in val_str: multiplier = 1_000.0; val_str = val_str.replace('K', '')
+        if 'tỷ' in val_str or 'b' in val_str:
+            multiplier = 1_000_000_000.0
+        elif 'triệu' in val_str or 'tr' in val_str or 'm' in val_str:
+            multiplier = 1_000_000.0
+        elif 'k' in val_str or 'nghìn' in val_str or 'ngàn' in val_str:
+            multiplier = 1_000.0
+            
+        match = re.search(r'([\d\.,]+)', val_str)
+        if not match:
+            return 0.0
+        num_str = match.group(1)
+        
+        if ',' in num_str and '.' in num_str:
+            if num_str.find('.') < num_str.find(','):
+                num_str = num_str.replace('.', '').replace(',', '.')
+            else:
+                num_str = num_str.replace(',', '')
+        elif ',' in num_str:
+            parts = num_str.split(',')
+            if len(parts) == 2:
+                decimal_part = parts[1]
+                if len(decimal_part) == 3 and multiplier == 1.0:
+                    num_str = num_str.replace(',', '')
+                else:
+                    num_str = num_str.replace(',', '.')
+            else:
+                num_str = num_str.replace(',', '')
+        elif '.' in num_str:
+            parts = num_str.split('.')
+            if len(parts) == 2:
+                decimal_part = parts[1]
+                if len(decimal_part) == 3 and multiplier == 1.0:
+                    num_str = num_str.replace('.', '')
+                else:
+                    pass
+            else:
+                num_str = num_str.replace('.', '')
+                
         try:
-            clean_str = "".join(c for c in val_str if c.isdigit() or c == '.')
-            return float(clean_str) * multiplier if clean_str else 0.0
-        except: return 0.0
+            return float(num_str) * multiplier
+        except:
+            return 0.0
+
 
     def format_metric(val):
         if val >= 1_000_000: return f"{val/1_000_000:.1f}M".replace(".0M", "M")
@@ -514,7 +553,7 @@ def run_bot():
         return
 
     # PID is now handled by isolated_runner.py
-    # write_pid()
+    write_pid()
     
     app = ApplicationBuilder().token(bot_token).build()
     # Register builtin commands

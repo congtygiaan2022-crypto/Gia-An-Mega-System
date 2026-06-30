@@ -27,6 +27,22 @@ if __name__ == "__main__":
     try:
         print("Installing ChromeDriver...")
         driver_path = ChromeDriverManager().install()
+        if not driver_path.lower().endswith("chromedriver.exe"):
+            search_dir = os.path.dirname(driver_path)
+            found = False
+            for root, dirs, files in os.walk(search_dir):
+                if "chromedriver.exe" in files:
+                    driver_path = os.path.join(root, "chromedriver.exe")
+                    found = True
+                    break
+            if not found:
+                # Also try parent dir
+                parent_dir = os.path.dirname(search_dir)
+                for root, dirs, files in os.walk(parent_dir):
+                    if "chromedriver.exe" in files:
+                        driver_path = os.path.join(root, "chromedriver.exe")
+                        break
+        
         print(f"Driver Path: {driver_path} (exists: {os.path.exists(driver_path)})")
         
         print("Launching WebDriver...")

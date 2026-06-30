@@ -61,6 +61,13 @@ class LogManager:
         conn = self._get_connection()
         try:
             with conn:
+                # Check if run_id exists in task_logs first
+                cursor = conn.execute("SELECT 1 FROM task_logs WHERE id = ?", (run_id,))
+                if not cursor.fetchone():
+                    conn.execute(
+                        "INSERT INTO task_logs (id, task_id, task_name, status, start_time) VALUES (?, ?, ?, ?, ?)",
+                        (run_id, "unknown_task", f"Auto-Registered Run ({run_id})", "RUNNING", datetime.datetime.now().isoformat())
+                    )
                 conn.execute(
                     "INSERT INTO task_steps (task_log_id, step_name, status, message, timestamp) VALUES (?, ?, ?, ?, ?)",
                     (run_id, step_name, status, str(message), datetime.datetime.now().isoformat())

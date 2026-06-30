@@ -7,7 +7,7 @@ import sys
 logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
-    datefmt="%H:%M:%S",
+    datefmt="%Y-%m-%d %H:%M:%S",
     stream=sys.stdout
 )
 log = logging.getLogger("run_cli")
@@ -40,10 +40,18 @@ def main():
         log.error(f"Account with ID {args.account_id} not found in DB.")
         sys.exit(1)
 
+    from modules.lock_manager import acquire_lock, release_lock
+    uid = getattr(acc, "uid", "") or str(acc.id) or "cli"
+    lock_name = f"checker_{uid}"
+
+    if not acquire_lock(lock_name):
+        log.error(f"Tài khoản {acc.display_name} đang được quét bởi tiến trình khác. Không thể chạy trùng lặp.")
+        input("\n[Nhấn Enter để thoát cửa sổ này...]")
+        sys.exit(1)
+
     log.info(f"Starting check for account: {acc.display_name}")
 
     # Xác định profile dir cho tài khoản này
-    uid = getattr(acc, "uid", "") or str(acc.id) or "cli"
     profile_dir = chrome_profile_dir(uid)
 
     # Temporary modify config for this run
@@ -95,6 +103,10 @@ def main():
                 driver.quit()
             except Exception:
                 pass
+        try:
+            release_lock(lock_name)
+        except Exception:
+            pass
 
         input("\n[Nhấn Enter để thoát cửa sổ này...]")
 

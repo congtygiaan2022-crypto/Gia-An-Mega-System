@@ -145,19 +145,7 @@ class WapScraper:
         
         # Kiểm tra 3: Mở trang chi tiết để xác nhận (chỉ khi thời gian mơ hồ)
         self._log(f"🔗 Đang kiểm tra chi tiết tại Wap.vn: {detail_url}")
-        original_window = None
-        _new_tab_opened = False
         try:
-            try:
-                original_window = self.browser.driver.current_window_handle
-            except Exception:
-                self._log("⚠️ Session trình duyệt lỗi. Cho qua.", "ERROR")
-                return True  # Lỗi session → không biết → cho qua để BCGame kiểm tra tiếp
-
-            self.browser.execute_script("window.open('');")
-            _new_tab_opened = True
-            self.browser.driver.switch_to.window(self.browser.driver.window_handles[-1])
-            
             self.browser.driver.get(detail_url)
             time.sleep(3)
             
@@ -168,29 +156,12 @@ class WapScraper:
             definitive_live_kw = ['đang diễn ra', 'đang thi đấu', 'hiệp 1:', 'hiệp 2:']
             if any(kw in page_text for kw in definitive_live_kw):
                 self._log("⚠️ Xác nhận trận đang LIVE từ trang chi tiết.", "WARNING")
-                try:
-                    self.browser.driver.close()
-                except Exception:
-                    pass
-                self.browser.driver.switch_to.window(original_window)
                 return False
 
-            try:
-                self.browser.driver.close()
-            except Exception:
-                pass
-            self.browser.driver.switch_to.window(original_window)
             return True  # Không có dấu hiệu live → coi là chưa đá
 
         except Exception as e:
             self._log(f"⚠️ Lỗi check detail: {e}", "DEBUG")
-            try:
-                if _new_tab_opened and len(self.browser.driver.window_handles) > 1:
-                    self.browser.driver.close()
-                if original_window:
-                    self.browser.driver.switch_to.window(original_window)
-            except Exception:
-                pass
             return True  # Lỗi → cho qua, BCGame sẽ kiểm tra status thêm
 
 

@@ -85,7 +85,8 @@ class Scheduler:
                 global_task_queue.tasks[q_id]["status"] = "running"
                 
                 # Auto-close existing instance of this plugin to prevent duplicates
-                self.terminate_task(plugin_name)
+                # pass task_id and kill_service=False so the background bot service itself is not terminated during auto-monitoring runs
+                self.terminate_task(plugin_name, task_id, kill_service=False)
                 
                 # Launch in new CMD window
                 # Create a temporary file for arguments to avoid escaping issues in CMD
@@ -135,11 +136,11 @@ class Scheduler:
             logger.error(f"Task Execution Error: {e}")
             self.log_manager.finish_run(run_id, "ERROR")
 
-    def terminate_task(self, plugin_name, task_id=None):
+    def terminate_task(self, plugin_name, task_id=None, kill_service=True):
         """Kills any processes or CMD windows associated with the plugin."""
         if not plugin_name:
             return
-        logger.info(f"Terminating instance of {plugin_name} (Task ID: {task_id})")
+        logger.info(f"Terminating instance of {plugin_name} (Task ID: {task_id}, kill_service: {kill_service})")
         
         # 2. Hard kill associated processes using PID file if exists
         import psutil
@@ -208,11 +209,14 @@ class Scheduler:
             import subprocess
             if task_id:
                 subprocess.run(f'taskkill /F /FI "WINDOWTITLE eq Jarvis_Auto_{plugin_name}_{task_id}*" /T', shell=True, capture_output=True)
+                if kill_service and plugin_name == "jarvis_telegram_report_assistant":
+                    subprocess.run('taskkill /F /FI "WINDOWTITLE eq Jarvis_Manual_Telegram_Bot*" /T', shell=True, capture_output=True)
             else:
                 subprocess.run(f'taskkill /F /FI "WINDOWTITLE eq Jarvis_Auto_{plugin_name}_*" /T', shell=True, capture_output=True)
-                subprocess.run(f'taskkill /F /FI "WINDOWTITLE eq Jarvis_Manual_{plugin_name}*" /T', shell=True, capture_output=True)
-                if plugin_name == "jarvis_telegram_report_assistant":
-                    subprocess.run('taskkill /F /FI "WINDOWTITLE eq Jarvis_Manual_Telegram_Bot*" /T', shell=True, capture_output=True)
+                if kill_service:
+                    subprocess.run(f'taskkill /F /FI "WINDOWTITLE eq Jarvis_Manual_{plugin_name}*" /T', shell=True, capture_output=True)
+                    if plugin_name == "jarvis_telegram_report_assistant":
+                        subprocess.run('taskkill /F /FI "WINDOWTITLE eq Jarvis_Manual_Telegram_Bot*" /T', shell=True, capture_output=True)
         except:
             pass
             
