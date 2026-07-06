@@ -9,7 +9,9 @@ import {
   Settings,
   User,
   LogOut,
-  Code2
+  Code2,
+  UserCheck,
+  FileCode
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -20,6 +22,8 @@ export const Sidebar: React.FC = () => {
     { id: 'profiles', name: 'Danh sách Profile', icon: AppWindow },
     { id: 'proxies', name: 'Quản lý Proxy', icon: Network },
     { id: 'cookies', name: 'Quản lý Cookie', icon: Cookie },
+    { id: 'user-agents', name: 'Quản lý User Agent', icon: UserCheck },
+    { id: 'templates', name: 'Template Profile', icon: FileCode },
     { id: 'automation', name: 'Tự động hóa', icon: Zap },
     { id: 'api-guide', name: 'Kết nối API', icon: Code2 },
     { id: 'settings', name: 'Cài đặt hệ thống', icon: Settings },

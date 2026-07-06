@@ -169,6 +169,13 @@ class AccountsPage(ctk.CTkFrame):
                        font=ctk.CTkFont("Segoe UI", 12),
                        command=self._delete_selected).pack(side="left", padx=4)
 
+        self.mode_var = tk.StringVar(value="Mobile" if self.app.config.get("mobile_settings", {}).get("enabled", False) else "PC")
+        ctk.CTkLabel(act, text="Chế độ:", font=ctk.CTkFont("Segoe UI", 12)).pack(side="left", padx=(15, 2))
+        self.mode_menu = ctk.CTkOptionMenu(act, variable=self.mode_var,
+                                           values=["PC", "Mobile"],
+                                           width=90, command=self._on_mode_change)
+        self.mode_menu.pack(side="left", padx=2)
+
     # ── Data ────────────────────────────────────────────────────────────────
     def refresh(self):
         from modules.account_manager import get_manager
@@ -344,6 +351,16 @@ class AccountsPage(ctk.CTkFrame):
         mgr = get_manager()
         auto_del = self.app.config.get("checker", {}).get("auto_delete_flagged", False)
         
+        is_mobile = self.app.config.get("mobile_settings", {}).get("enabled", False)
+        grid_layout = self.app.config.get("mobile_settings", {}).get("grid_layout", "2x2")
+        try:
+            r_str, c_str = grid_layout.lower().replace(":", "x").split("x")
+            grid_rows = int(r_str)
+            grid_cols = int(c_str)
+        except Exception:
+            grid_rows = 2
+            grid_cols = 2
+
         opened = 0
         for iid in sel:
             idx = int(iid)
@@ -352,6 +369,13 @@ class AccountsPage(ctk.CTkFrame):
                 cmd = ["python", "run_cli.py", "--account-id", str(acc.id)]
                 if auto_del:
                     cmd.append("--auto-delete")
+                if is_mobile:
+                    cmd.extend([
+                        "--mobile",
+                        "--window-index", str(opened),
+                        "--grid-rows", str(grid_rows),
+                        "--grid-cols", str(grid_cols)
+                    ])
                 # Mở CMD mới
                 subprocess.Popen(cmd, creationflags=subprocess.CREATE_NEW_CONSOLE)
                 opened += 1
@@ -389,6 +413,9 @@ class AccountsPage(ctk.CTkFrame):
             for idx in idxs:
                 mgr.remove(idx)
             self.refresh()
+
+    def _on_mode_change(self, choice):
+        self.app.set_mobile_mode(choice == "Mobile")
 
 
 # ═════════════════════════════════════════════════════
@@ -440,6 +467,16 @@ class LoginPage(ctk.CTkFrame):
         ctk.CTkCheckBox(card, text="Chế độ ẩn (headless)", variable=self.headless_var,
                          font=ctk.CTkFont("Segoe UI", 12), text_color=C_DIM).pack(pady=6)
 
+        # Add mode menu to LoginPage
+        self.mode_var = tk.StringVar(value="Mobile" if self.app.config.get("mobile_settings", {}).get("enabled", False) else "PC")
+        r_mode = ctk.CTkFrame(card, fg_color="transparent")
+        r_mode.pack(pady=4)
+        ctk.CTkLabel(r_mode, text="Chế độ chạy:", font=ctk.CTkFont("Segoe UI", 12), text_color=C_DIM).pack(side="left", padx=4)
+        self.mode_menu = ctk.CTkOptionMenu(r_mode, variable=self.mode_var,
+                                           values=["PC", "Mobile"],
+                                           width=100, command=self._on_mode_change)
+        self.mode_menu.pack(side="left", padx=4)
+
         self.login_btn = ctk.CTkButton(card, text="  Đăng Nhập", width=360, height=44,
                                         font=ctk.CTkFont("Segoe UI", 14, "bold"),
                                         fg_color=C_ACCENT, hover_color="#1464d8",
@@ -477,6 +514,9 @@ class LoginPage(ctk.CTkFrame):
                 "password": self.pass_var.get(),
                 "secret_2fa": self.tfa_var.get().strip(),
                 "headless": self.headless_var.get()}
+
+    def _on_mode_change(self, choice):
+        self.app.set_mobile_mode(choice == "Mobile")
 
 
 # ═════════════════════════════════════════════════════
@@ -757,27 +797,39 @@ class CheckerPage(ctk.CTkFrame):
         self.sleep_entry = ctk.CTkEntry(opt, textvariable=self.sleep_var, width=45)
         self.sleep_entry.pack(side="left", padx=2)
 
-        self.run_btn = ctk.CTkButton(opt, text="▶ Quét Tất Cả",
+        self.mode_var = tk.StringVar(value="Mobile" if self.app.config.get("mobile_settings", {}).get("enabled", False) else "PC")
+        ctk.CTkLabel(opt, text="Chế độ:", font=ctk.CTkFont("Segoe UI", 12)).pack(side="left", padx=(12, 2))
+        self.mode_menu = ctk.CTkOptionMenu(opt, variable=self.mode_var,
+                                           values=["PC", "Mobile"],
+                                           width=90, command=self._on_mode_change)
+        self.mode_menu.pack(side="left", padx=2)
+
+        # Hàng 2: Các nút bấm điều khiển (Run, Stop)
+        ctrl_frame = ctk.CTkFrame(self, fg_color="transparent")
+        ctrl_frame.pack(fill="x", padx=0, pady=(5, 5))
+
+        self.run_btn = ctk.CTkButton(ctrl_frame, text="▶ Quét Tất Cả",
                                       fg_color=C_GREEN, hover_color="#248f39",
-                                      height=40, width=120,
+                                      height=40, width=140,
                                       font=ctk.CTkFont("Segoe UI", 12, "bold"),
                                       command=self.app.do_run_checker_all)
-        self.run_btn.pack(side="right", padx=5)
+        self.run_btn.pack(side="left", padx=(0, 10))
 
-        self.run_sel_btn = ctk.CTkButton(opt, text="▶ Quét Đã Chọn",
+        self.run_sel_btn = ctk.CTkButton(ctrl_frame, text="▶ Quét Đã Chọn",
                                       fg_color=C_ACCENT, hover_color="#166fe5",
-                                      height=40, width=130,
+                                      height=40, width=140,
                                       font=ctk.CTkFont("Segoe UI", 12, "bold"),
                                       command=self.app.do_run_checker_selected)
-        self.run_sel_btn.pack(side="right", padx=5)
+        self.run_sel_btn.pack(side="left", padx=10)
         
-        self.stop_btn = ctk.CTkButton(opt, text="⏹  Dừng Quét",
+        self.stop_btn = ctk.CTkButton(ctrl_frame, text="⏹  Dừng Quét Ngay",
                                        fg_color=C_DANGER, hover_color="#b92d2a",
-                                       height=40, width=120,
+                                       height=40, width=160,
                                        font=ctk.CTkFont("Segoe UI", 13, "bold"),
                                        command=self.app.do_stop_checker,
                                        state="disabled")
-        self.stop_btn.pack(side="right", padx=5)
+        self.stop_btn.pack(side="left", padx=10)
+
 
         # Stats
         stats = ctk.CTkFrame(self, fg_color=C_CARD, corner_radius=12)
@@ -815,6 +867,9 @@ class CheckerPage(ctk.CTkFrame):
             self.loop_entry.configure(state="normal")
         else:
             self.loop_entry.configure(state="disabled")
+
+    def _on_mode_change(self, choice):
+        self.app.set_mobile_mode(choice == "Mobile")
 
     def _stat(self, p, lbl, val):
         b = ctk.CTkFrame(p, fg_color="transparent")
@@ -919,6 +974,50 @@ class SettingsPage(ctk.CTkFrame):
         ctk.CTkEntry(r, textvariable=self.interval_var, width=80,
                      font=ctk.CTkFont("Segoe UI", 13)).pack(side="right")
 
+        # --- Mobile Settings Card ---
+        m_card = ctk.CTkFrame(self, fg_color=C_CARD, corner_radius=12)
+        m_card.pack(fill="x", padx=28, pady=10)
+
+        ctk.CTkLabel(m_card, text="📱 Cấu Hình Chế Độ Mobile",
+                     font=ctk.CTkFont("Segoe UI", 14, "bold"),
+                     text_color=C_TEXT, anchor="w").pack(fill="x", padx=16, pady=(12, 4))
+
+        # Grid layout option
+        gr = ctk.CTkFrame(m_card, fg_color="transparent")
+        gr.pack(fill="x", padx=16, pady=6)
+        ctk.CTkLabel(gr, text="Bố cục lưới trình duyệt (Hàng x Cột)", width=240,
+                     font=ctk.CTkFont("Segoe UI", 13), text_color=C_TEXT, anchor="w").pack(side="left")
+        
+        m_cfg = sel.get("mobile_settings", {})
+        self.grid_var = tk.StringVar(value=m_cfg.get("grid_layout", "2x2"))
+        self.grid_menu = ctk.CTkOptionMenu(gr, variable=self.grid_var,
+                           values=["1x1", "1x2", "2x1", "2x2", "3x3", "4x4"],
+                           width=100)
+        self.grid_menu.pack(side="right")
+
+        # User Agents Label
+        ctk.CTkLabel(m_card, text="Danh sách User Agent Mobile (mỗi dòng một UA):",
+                     font=ctk.CTkFont("Segoe UI", 13), text_color=C_TEXT, anchor="w").pack(fill="x", padx=16, pady=(6, 2))
+
+        # User Agents Textbox
+        self.ua_box = ctk.CTkTextbox(m_card, height=120, font=ctk.CTkFont("Consolas", 11),
+                                     fg_color=C_BG, text_color=C_TEXT, corner_radius=8)
+        self.ua_box.pack(fill="both", expand=True, padx=16, pady=(2, 10))
+
+        # Populate User Agents
+        from modules.config_loader import CONFIG
+        uas = m_cfg.get("user_agents", [])
+        if not uas:
+            uas = CONFIG.get("mobile_settings", {}).get("user_agents", [
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (Linux; Android 15; Pixel 9 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 15; SM-S938B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 15; SM-A566B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+                "Mozilla/5.0 (Linux; Android 15; V2415A) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36"
+            ])
+        self.ua_box.insert("1.0", "\n".join(uas))
+
         ctk.CTkButton(self, text="💾 Lưu", height=40, width=140,
                        fg_color=C_ACCENT, hover_color="#1464d8",
                        font=ctk.CTkFont("Segoe UI", 13, "bold"),
@@ -941,6 +1040,16 @@ class SettingsPage(ctk.CTkFrame):
             c["checker"]["scan_interval_seconds"] = int(self.interval_var.get())
         except ValueError:
             pass
+
+        # Save Mobile Settings
+        m_cfg = c.setdefault("mobile_settings", {})
+        m_cfg["grid_layout"] = self.grid_var.get()
+        
+        raw_uas = self.ua_box.get("1.0", "end").strip().split("\n")
+        uas = [ua.strip() for ua in raw_uas if ua.strip()]
+        if uas:
+            m_cfg["user_agents"] = uas
+
         self.app.save_config()
         messagebox.showinfo("OK", "Đã lưu cài đặt!")
 
@@ -998,14 +1107,38 @@ class App(ctk.CTk):
 
     # ── Config ──────────────────────────────────────────────────────────────
     def _load_cfg(self) -> dict:
+        from modules.config_loader import CONFIG
         if os.path.exists(self.CONFIG_PATH):
-            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
+            try:
+                with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                # Đồng bộ với CONFIG global
+                CONFIG.clear()
+                CONFIG.update(cfg)
+                return cfg
+            except Exception:
+                pass
         return {}
 
     def save_config(self):
+        from modules.config_loader import CONFIG
+        # Đồng bộ với CONFIG global trước khi lưu
+        CONFIG.clear()
+        CONFIG.update(self.config)
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=2, ensure_ascii=False)
+
+    def set_mobile_mode(self, is_mobile: bool):
+        self.config.setdefault("mobile_settings", {})["enabled"] = is_mobile
+        self.save_config()
+        mode_str = "Mobile" if is_mobile else "PC"
+        # Đồng bộ các Dropdown / OptionMenu trên UI của 3 trang
+        for page_name in ["accounts", "login", "checker"]:
+            if page_name in self.pages:
+                try:
+                    self.pages[page_name].mode_var.set(mode_str)
+                except Exception:
+                    pass
 
     # ── Queue ────────────────────────────────────────────────────────────────
     def _poll(self):
@@ -1432,6 +1565,7 @@ class App(ctk.CTk):
                     self.driver, db, pages_to_scan, auto_delete=auto_delete,
                     log_callback=lambda m: self._q.put({"kind": "checker_log", "text": m}),
                     account_name=self.profile_data.get("name", "GUI"),
+                    account_uid=uid,
                     stop_event=self.stop_checker_event,
                     profile_dir=getattr(self, "_chrome_profile_dir", None),
                 )

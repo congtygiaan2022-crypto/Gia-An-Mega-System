@@ -16,6 +16,10 @@ def main():
     parser = argparse.ArgumentParser(description="Run Facebook Copyright Checker for a specific account via CLI")
     parser.add_argument("--account-id", type=int, required=True, help="Database ID of the account")
     parser.add_argument("--auto-delete", action="store_true", help="Automatically delete flagged posts")
+    parser.add_argument("--mobile", action="store_true", help="Run in mobile mode")
+    parser.add_argument("--window-index", type=int, default=0, help="Window index for grid layout")
+    parser.add_argument("--grid-rows", type=int, default=1, help="Grid rows for window layout")
+    parser.add_argument("--grid-cols", type=int, default=1, help="Grid cols for window layout")
     args = parser.parse_args()
 
     # Append root path
@@ -58,6 +62,13 @@ def main():
     CONFIG["facebook"]["email"] = acc.email
     CONFIG["facebook"]["password"] = acc.password
     CONFIG["facebook"]["2fa_secret"] = acc.secret_2fa
+    CONFIG["facebook"]["uid"] = uid
+
+    CONFIG.setdefault("mobile_settings", {})
+    CONFIG["mobile_settings"]["enabled"] = args.mobile
+    CONFIG["mobile_settings"]["window_index"] = args.window_index
+    CONFIG["mobile_settings"]["grid_rows"] = args.grid_rows
+    CONFIG["mobile_settings"]["grid_cols"] = args.grid_cols
 
     # Đảm bảo profile sạch trước khi mở
     try:
@@ -82,6 +93,7 @@ def main():
             driver, db, fanpages, auto_delete=args.auto_delete,
             log_callback=log.info,
             account_name=acc.display_name,
+            account_uid=uid,
             profile_dir=profile_dir,
         )
 

@@ -37,6 +37,17 @@ def init_db():
         )
     """)
     
+    # Bảng processed_posts lưu lịch sử các bài đã reup
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS processed_posts (
+            profile_name TEXT,
+            platform TEXT,
+            post_id TEXT,
+            processed_at TEXT,
+            PRIMARY KEY (profile_name, platform, post_id)
+        )
+    """)
+    
     conn.commit()
     conn.close()
 
@@ -86,16 +97,75 @@ def clear_all_profile_logs():
     conn.close()
 
 def get_all_status(profiles):
+    import os
     conn = get_connection()
     cursor = conn.cursor()
     result = {}
     for p in profiles:
         cursor.execute("SELECT status, logs_json FROM profile_logs WHERE profile_name = ?", (p,))
         row = cursor.fetchone()
+        
+        status_val = "Idle"
+        logs = []
         if row:
-            result[p] = {"status": row[0], "logs": json.loads(row[1])}
-        else:
-            result[p] = {"status": "Idle", "logs": []}
+            status_val = row[0]
+            try:
+                logs = json.loads(row[1])
+            except:
+                logs = []
+                
+        # 1. Đếm số bài đăng thành công và số lỗi từ logs
+        success_count = 0
+        errors_count = 0
+        for log in logs:
+            log_lower = log.lower()
+            if "đăng bài thành công" in log_lower or "xem như đăng thành công" in log_lower or "đăng thành công" in log_lower:
+                success_count += 1
+            if any(keyword in log_lower for keyword in ["lỗi", "loi", "thất bại", "that bai", "error", "exception", "timeout"]):
+                if "warning:" not in log_lower and "canh bao:" not in log_lower:
+                    errors_count += 1
+                    
+        # 2. Đọc config từ profile_settings để lấy cấu hình
+        cursor.execute("SELECT config_json FROM profile_settings WHERE profile_name = ?", (p,))
+        cfg_row = cursor.fetchone()
+        cfg = {}
+        if cfg_row:
+            try:
+                cfg = json.loads(cfg_row[0])
+            except:
+                cfg = {}
+                
+        # 3. Đếm số lượng ảnh cục bộ trong input_img_dir
+        input_img_dir = cfg.get("input_img_dir", "").strip()
+        img_count = 0
+        if input_img_dir and os.path.exists(input_img_dir):
+            try:
+                img_count = len([f for f in os.listdir(input_img_dir) if os.path.isfile(os.path.join(input_img_dir, f))])
+            except:
+                img_count = 0
+                
+        # 4. Trích xuất cấu hình hiển thị
+        ai_source = cfg.get("ai_source", "google")
+        fanpage_url = cfg.get("fanpage_url", "").strip()
+        fanpage_name = cfg.get("fanpage_name", "").strip()
+        
+        if not fanpage_name:
+            if fanpage_url:
+                fanpage_name = fanpage_url.split('/')[-1] if '/' in fanpage_url else fanpage_url
+            else:
+                fanpage_name = "-"
+                
+        result[p] = {
+            "status": status_val, 
+            "logs": logs,
+            "mini_stats": {
+                "total_posts": success_count,
+                "input_img_count": img_count,
+                "ai_source": ai_source,
+                "total_errors": errors_count,
+                "fanpage_name": fanpage_name
+            }
+        }
     conn.close()
     return result
 
@@ -184,3 +254,160 @@ except sqlite3.OperationalError as e:
             pass
 except Exception:
     pass
+
+def mark_post_processed(profile_name, platform, post_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR IGNORE INTO processed_posts (profile_name, platform, post_id, processed_at) VALUES (?, ?, ?, ?)", 
+                   (profile_name, platform, post_id, datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    conn.commit()
+    conn.close()
+
+def get_profile_dashboard_stats(profile_name):
+    import os
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # 1. Tổng số bài đã reup
+    cursor.execute("SELECT COUNT(*) FROM processed_posts WHERE profile_name = ?", (profile_name,))
+    total_posts = cursor.fetchone()[0]
+    
+    # 2. Lịch sử reup gần nhất (15 bài)
+    cursor.execute("""
+        SELECT platform, post_id, processed_at 
+        FROM processed_posts 
+        WHERE profile_name = ? 
+        ORDER BY processed_at DESC 
+        LIMIT 15
+    """, (profile_name,))
+    history_rows = cursor.fetchall()
+    history = []
+    for r in history_rows:
+        history.append({
+            "platform": r[0],
+            "post_id": r[1],
+            "processed_at": r[2]
+        })
+        
+    # 3. Trạng thái và Logs để parse lỗi & trùng lặp
+    cursor.execute("SELECT status, logs_json FROM profile_logs WHERE profile_name = ?", (profile_name,))
+    row = cursor.fetchone()
+    status = "Idle"
+    logs = []
+    if row:
+        status = row[0]
+        try:
+            logs = json.loads(row[1])
+        except:
+            logs = []
+            
+    # 4. Đọc config từ profile_settings để lấy cấu hình
+    cursor.execute("SELECT config_json FROM profile_settings WHERE profile_name = ?", (profile_name,))
+    cfg_row = cursor.fetchone()
+    cfg = {}
+    if cfg_row:
+        try:
+            cfg = json.loads(cfg_row[0])
+        except:
+            cfg = {}
+            
+    # 5. Đếm số lượng ảnh cục bộ trong input_img_dir
+    input_img_dir = cfg.get("input_img_dir", "").strip()
+    img_count = 0
+    if input_img_dir and os.path.exists(input_img_dir):
+        try:
+            img_count = len([f for f in os.listdir(input_img_dir) if os.path.isfile(os.path.join(input_img_dir, f))])
+        except:
+            img_count = 0
+            
+    conn.close()
+    
+    # Phân tích log tìm lỗi & số bài trùng lặp
+    errors = []
+    skipped_count = 0
+    
+    for log in logs:
+        log_lower = log.lower()
+        if any(keyword in log_lower for keyword in ["lỗi", "loi", "thất bại", "that bai", "error", "exception", "timeout"]):
+            if "warning:" not in log_lower and "canh bao:" not in log_lower:
+                errors.append(log)
+        if any(keyword in log_lower for keyword in ["bỏ qua", "bo qua"]):
+            skipped_count += 1
+            
+    return {
+        "profile_name": profile_name,
+        "status": status,
+        "total_posts": total_posts,
+        "history": history,
+        "errors": errors[-5:], # Chỉ lấy 5 lỗi gần nhất để show
+        "total_errors": len(errors),
+        "skipped_count": skipped_count,
+        "input_img_count": img_count
+    }
+
+def backfill_processed_posts():
+    import re
+    from datetime import datetime
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    # Đảm bảo bảng đã tồn tại
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS processed_posts (
+            profile_name TEXT,
+            platform TEXT,
+            post_id TEXT,
+            processed_at TEXT,
+            PRIMARY KEY (profile_name, platform, post_id)
+        )
+    """)
+    
+    cursor.execute("SELECT profile_name, logs_json FROM profile_logs")
+    rows = cursor.fetchall()
+    
+    current_year = datetime.now().year
+    
+    for profile_name, logs_json in rows:
+        if not logs_json:
+            continue
+        try:
+            logs = json.loads(logs_json)
+        except Exception:
+            continue
+            
+        for log in logs:
+            log_lower = log.lower()
+            if "✅ đăng bài thành công" in log_lower or "xem như đăng thành công" in log_lower:
+                match = re.search(r'\[(\d{2}/\d{2} \d{2}:\d{2})\]', log)
+                if match:
+                    time_part = match.group(1)
+                    try:
+                        dt = datetime.strptime(f"{time_part}/{current_year}", "%d/%m %H:%M/%Y")
+                        processed_at = dt.strftime("%Y-%m-%d %H:%M:%S")
+                    except Exception:
+                        processed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                else:
+                    processed_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                post_id = f"Post_{processed_at.replace(' ', '_').replace(':', '')}"
+                
+                cursor.execute("""
+                    SELECT COUNT(*) FROM processed_posts 
+                    WHERE profile_name = ? AND platform = 'facebook' AND processed_at = ?
+                """, (profile_name, processed_at))
+                if cursor.fetchone()[0] == 0:
+                    cursor.execute("""
+                        INSERT OR IGNORE INTO processed_posts (profile_name, platform, post_id, processed_at) 
+                        VALUES (?, 'facebook', ?, ?)
+                    """, (profile_name, post_id, processed_at))
+                    
+    conn.commit()
+    conn.close()
+
+# Tự động gọi backfill khi module được tải
+try:
+    backfill_processed_posts()
+except Exception:
+    pass
+
+

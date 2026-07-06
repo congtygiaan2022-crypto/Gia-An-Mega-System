@@ -586,6 +586,11 @@ def main(profile_name, current_loop):
                             if success:
                                 success_count += 1
                                 p_log(profile_name, f"[{profile_name}] ✅ Đăng bài thành công lên Fanpage {idx+1}/{len(urls)}")
+                                try:
+                                    post_id = os.path.splitext(os.path.basename(txt_path))[0] if txt_path else f"Post_{int(time.time())}"
+                                    db_manager.mark_post_processed(profile_name, 'facebook', post_id)
+                                except Exception as db_err:
+                                    p_log(profile_name, f"[{profile_name}] Cảnh báo: Lỗi khi lưu lịch sử đăng vào DB: {db_err}")
                                 if not is_last:
                                     p_log(profile_name, f"[{profile_name}] Chờ 5 giây trước khi đăng trang tiếp theo...")
                                     time.sleep(5)

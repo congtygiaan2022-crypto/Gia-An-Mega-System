@@ -257,6 +257,21 @@ def save_profile_config(profile_name):
     db_manager.save_profile_config(profile_name, data)
     return jsonify({"success": True})
 
+@app.route('/api/dashboard/<profile_name>', methods=['GET'])
+def get_dashboard_stats(profile_name):
+    try:
+        stats = db_manager.get_profile_dashboard_stats(profile_name)
+        cfg = db_manager.get_profile_config(profile_name)
+        stats["sources"] = {
+            "instagram": [],
+            "x": [],
+            "threads": [],
+            "fanpages": [cfg.get("fanpage_url")] if cfg.get("fanpage_url") else []
+        }
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 def start_file_watcher():
     import threading
     import time

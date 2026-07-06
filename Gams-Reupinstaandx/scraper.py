@@ -421,6 +421,63 @@ def scrape_x_profile(page, profile_url, num_posts=3, profile_name="System"):
         p_log(profile_name, f"Lỗi quét X profile: {e}")
         return []
 
+def scrape_x_post(page, post_url, profile_name="System"):
+    """
+    Truy cập trang chi tiết tweet X (Twitter) để lấy caption và media URL.
+    """
+    p_log(profile_name, f"Đang cào chi tiết tweet X: {post_url}")
+    try:
+        page.goto(post_url, timeout=60000)
+        page.wait_for_timeout(5000)
+        
+        # Đợi phần article hiển thị
+        try:
+            page.wait_for_selector('article', timeout=15000)
+        except Exception:
+            p_log(profile_name, "Không tìm thấy tweet article chi tiết.")
+            return None
+            
+        tweet = page.locator('article').first
+        if tweet.count() == 0:
+            return None
+            
+        # Lấy caption
+        text_loc = tweet.locator('div[data-testid="tweetText"], div.font-chirp, div[class*="font-chirp"]').first
+        caption = text_loc.inner_text().strip() if text_loc.count() > 0 else ""
+        
+        # Xác định media
+        media_type = "text"
+        media_url = ""
+        
+        # Video
+        video_loc = tweet.locator('video, div[data-testid="videoPlayer"]').first
+        if video_loc.count() > 0:
+            media_type = "video"
+            media_url = post_url
+            p_log(profile_name, "Phát hiện tweet dạng Video.")
+        else:
+            # Ảnh
+            photo_loc = tweet.locator('img[src*="pbs.twimg.com/media/"], div[data-testid="tweetPhoto"] img').first
+            if photo_loc.count() > 0:
+                media_type = "image"
+                raw_url = photo_loc.get_attribute("src") or ""
+                if raw_url and "pbs.twimg.com" in raw_url:
+                    raw_url = re.sub(r'[?&]name=[^&]+', '', raw_url)
+                    sep = '&' if '?' in raw_url else '?'
+                    media_url = raw_url + sep + "name=orig"
+                else:
+                    media_url = raw_url
+                p_log(profile_name, "Phát hiện tweet dạng Ảnh.")
+                
+        return {
+            "caption": caption,
+            "media_type": media_type,
+            "media_url": media_url
+        }
+    except Exception as e:
+        p_log(profile_name, f"Lỗi cào chi tiết tweet X: {e}")
+        return None
+
 def download_file_direct(url, output_path):
     # Tải file trực tiếp qua urllib
     try:

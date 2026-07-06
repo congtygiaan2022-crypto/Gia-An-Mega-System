@@ -1,3 +1,6 @@
-2026/06/30-07:49:12.890 67dc Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\IndexedDB\https_business.facebook.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/06/30-07:49:12.891 67dc Recovering log #32
-2026/06/30-07:49:12.892 67dc Reusing old log E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\IndexedDB\https_business.facebook.com_0.indexeddb.leveldb/000032.log 
+2026/07/06-07:51:20.905 8c50 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\IndexedDB\https_business.facebook.com_0.indexeddb.leveldb/MANIFEST-000001
+2026/07/06-07:51:20.905 8c50 Recovering log #75
+2026/07/06-07:51:20.932 8c50 Reusing old log E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\IndexedDB\https_business.facebook.com_0.indexeddb.leveldb/000075.log 
+2026/07/06-07:51:21.298 8c50 Level-0 table #81: started
+2026/07/06-07:51:21.364 8c50 Level-0 table #81: 2049083 bytes OK
+2026/07/06-07:51:21.369 8c50 Delete type=0 #75

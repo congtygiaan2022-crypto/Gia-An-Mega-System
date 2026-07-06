@@ -13,6 +13,8 @@ import { Cookies } from './pages/Cookies';
 import { Automation } from './pages/Automation';
 import { SettingsPage } from './pages/Settings';
 import { ApiGuide } from './pages/ApiGuide';
+import { UserAgents } from './pages/UserAgents';
+import { Templates } from './pages/Templates';
 
 function App() {
   const { isAuthenticated, activeTab, updateMetrics, syncProfiles, fetchServerStatus } = useStore();
@@ -51,6 +53,10 @@ function App() {
         return <Proxies />;
       case 'cookies':
         return <Cookies />;
+      case 'user-agents':
+        return <UserAgents />;
+      case 'templates':
+        return <Templates />;
       case 'automation':
         return <Automation />;
       case 'api-guide':

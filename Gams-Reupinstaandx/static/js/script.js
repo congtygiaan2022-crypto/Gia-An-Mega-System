@@ -604,6 +604,66 @@ async function fetchStatus() {
         
         for (const [profile, info] of Object.entries(data)) {
             applyStatusStyle(profile, info.status);
+            
+            // Cập nhật dữ liệu Mini Dashboard
+            if (info.mini_stats) {
+                const stats = info.mini_stats;
+                
+                // 1. Tổng bài viết đã reup
+                const totalEl = document.getElementById(`mini-val-total-${profile}`);
+                if (totalEl) totalEl.textContent = stats.total_posts || 0;
+                
+                // 2. Định dạng Ảnh/Video
+                const mediaEl = document.getElementById(`mini-val-media-${profile}`);
+                if (mediaEl) mediaEl.textContent = `${stats.image_count || 0}/${stats.video_count || 0}`;
+                
+                // 3. Số bài trùng lặp (skipped)
+                const skippedEl = document.getElementById(`mini-val-skipped-${profile}`);
+                if (skippedEl) skippedEl.textContent = stats.skipped_count || 0;
+                
+                // 4. Số lỗi
+                const errorsEl = document.getElementById(`mini-val-errors-${profile}`);
+                const errorItem = document.getElementById(`mini-item-errors-${profile}`);
+                if (errorsEl) {
+                    errorsEl.textContent = stats.total_errors || 0;
+                    if (stats.total_errors > 0) {
+                        errorsEl.style.color = '#f87171'; // Đỏ sáng
+                        if (errorItem) {
+                            errorItem.style.background = 'rgba(244, 63, 94, 0.1)';
+                            errorItem.style.borderColor = 'rgba(244, 63, 94, 0.2)';
+                        }
+                    } else {
+                        errorsEl.style.color = '#fff';
+                        if (errorItem) {
+                            errorItem.style.background = 'rgba(255, 255, 255, 0.015)';
+                            errorItem.style.borderColor = 'rgba(255, 255, 255, 0.02)';
+                        }
+                    }
+                }
+                
+                // 5. Nguồn cào (Hiển thị icon/nhãn)
+                const sourcesEl = document.getElementById(`mini-val-sources-${profile}`);
+                if (sourcesEl) {
+                    let sourcesHtml = [];
+                    if (stats.has_instagram) sourcesHtml.push(`<span style="color: #f43f5e; font-weight: 600;">📸 Insta</span>`);
+                    if (stats.has_x) sourcesHtml.push(`<span style="color: #38bdf8; font-weight: 600;">🐦 X</span>`);
+                    if (stats.has_threads) sourcesHtml.push(`<span style="color: #fff; font-weight: 600;">🧵 Threads</span>`);
+                    
+                    if (sourcesHtml.length > 0) {
+                        sourcesEl.innerHTML = sourcesHtml.join(' • ');
+                    } else {
+                        sourcesEl.innerHTML = `<span style="color: var(--text-muted); font-style: italic;">Chưa cấu hình</span>`;
+                    }
+                }
+                
+                // 6. Tên Fanpage đích
+                const fanpageEl = document.getElementById(`mini-val-fanpage-${profile}`);
+                if (fanpageEl) {
+                    fanpageEl.textContent = stats.fanpage_name || "-";
+                    fanpageEl.title = stats.fanpage_name || "";
+                }
+            }
+            
             const logList = document.getElementById(`log-list-${profile}`);
             if (logList && info.logs.length > 0) {
                 const currentLastLog = logList.lastElementChild ? logList.lastElementChild.textContent : "";
@@ -790,6 +850,222 @@ document.addEventListener('click', () => {
     });
 });
 
+let currentDashboardProfile = "";
+let dashboardIntervalId = null;
+
+function openDashboard(profile) {
+    currentDashboardProfile = profile;
+    document.getElementById('dashboard-modal').style.display = 'block';
+    
+    // Reset views
+    document.getElementById('dashboard-profile-name-sub').textContent = "Đang tải dữ liệu...";
+    document.getElementById('dash-stat-live').textContent = "Đang kết nối...";
+    
+    // Tải dữ liệu ngay lập tức
+    updateDashboardData(profile);
+    
+    // Tự động làm mới mỗi 3 giây để cập nhật số liệu thời gian thực
+    if (dashboardIntervalId) clearInterval(dashboardIntervalId);
+    dashboardIntervalId = setInterval(() => {
+        const modal = document.getElementById('dashboard-modal');
+        if (modal && modal.style.display === 'block') {
+            updateDashboardData(currentDashboardProfile);
+        } else {
+            clearInterval(dashboardIntervalId);
+        }
+    }, 3000);
+}
+
+function closeDashboard() {
+    document.getElementById('dashboard-modal').style.display = 'none';
+    if (dashboardIntervalId) {
+        clearInterval(dashboardIntervalId);
+        dashboardIntervalId = null;
+    }
+}
+
+function refreshDashboard() {
+    if (currentDashboardProfile) {
+        updateDashboardData(currentDashboardProfile);
+    }
+}
+
+async function updateDashboardData(profile) {
+    try {
+        // Tải config & stats từ API song song
+        const [configRes, statsRes] = await Promise.all([
+            fetch(`/api/profile_config/${profile}`),
+            fetch(`/api/dashboard/${profile}`)
+        ]);
+        
+        const config = await configRes.json();
+        const stats = await statsRes.json();
+        
+        if (!config || !stats) return;
+        
+        // 1. Tiêu đề và Subtitle
+        document.getElementById('dashboard-title').textContent = "📊 Dashboard: " + profile;
+        document.getElementById('dashboard-profile-name-sub').textContent = config.fanpage_name ? `Fanpage: ${config.fanpage_name}` : "Chưa đặt tên gợi nhớ Fanpage";
+        
+        // 2. Chấm trạng thái và Badge
+        const dot = document.getElementById('dashboard-status-dot');
+        const text = document.getElementById('dashboard-status-text');
+        
+        const status = stats.status || "Idle";
+        text.textContent = status;
+        
+        if (dot) {
+            dot.className = 'status-indicator-dot';
+            const s = status.toLowerCase();
+            if (s.includes('running') || status === "Running") {
+                dot.classList.add('active-running');
+                document.getElementById('dash-stat-live').textContent = "Đang chạy";
+                document.getElementById('dash-stat-live-detail').textContent = "Tiến trình cào/đăng bài đang active";
+            } else if (s.includes('generating') || s.includes('ai')) {
+                dot.classList.add('active-generating');
+                document.getElementById('dash-stat-live').textContent = "Xử lý AI";
+                document.getElementById('dash-stat-live-detail').textContent = "Đang viết status / vẽ ảnh qua AI";
+            } else if (s.includes('posting') || s.includes('fanpage')) {
+                dot.classList.add('active-posting');
+                document.getElementById('dash-stat-live').textContent = "Đăng bài";
+                document.getElementById('dash-stat-live-detail').textContent = "Đang đẩy file và điền composer FB";
+            } else if (s.includes('missing') || s.includes('deactivated')) {
+                dot.classList.add('active-idle');
+                document.getElementById('dash-stat-live').textContent = "Tạm dừng";
+                document.getElementById('dash-stat-live-detail').textContent = "Profile chưa kích hoạt hoặc thiếu cấu hình";
+            } else {
+                dot.classList.add('active-idle');
+                document.getElementById('dash-stat-live').textContent = "Đang chờ";
+                document.getElementById('dash-stat-live-detail').textContent = "Đang nghỉ giữa các vòng chạy";
+            }
+        }
+        
+        // 3. Số liệu thống kê
+        document.getElementById('dash-stat-total').textContent = stats.total_posts || 0;
+        document.getElementById('dash-stat-images').textContent = stats.image_count || 0;
+        document.getElementById('dash-stat-videos').textContent = stats.video_count || 0;
+        document.getElementById('dash-stat-skipped').textContent = stats.skipped_count || 0;
+        document.getElementById('dash-stat-errors').textContent = stats.total_errors || 0;
+        
+        const errCard = document.getElementById('dash-stat-error-card');
+        const errDetail = document.getElementById('dash-stat-errors-detail');
+        if (stats.total_errors > 0) {
+            errCard.style.background = 'rgba(244, 63, 94, 0.15)';
+            errCard.style.borderColor = 'rgba(244, 63, 94, 0.4)';
+            errDetail.textContent = "Phát hiện sự cố! Xem chi tiết ở dưới";
+            errDetail.style.color = '#f87171';
+        } else {
+            errCard.style.background = 'rgba(244, 63, 94, 0.06)';
+            errCard.style.borderColor = 'rgba(244, 63, 94, 0.15)';
+            errDetail.textContent = "Hoạt động an toàn";
+            errDetail.style.color = 'rgba(255,255,255,0.5)';
+        }
+        
+        // 4. Hiển thị liên kết nguồn & đích
+        const renderList = (arr) => {
+            if (!arr || arr.length === 0) return `<span style="color: var(--text-muted)">[Chưa cấu hình]</span>`;
+            return arr.map(link => `<a href="${link}" target="_blank" style="color: #60a5fa; text-decoration: none; display: block; margin-bottom: 2px; transition: color 0.2s;" onmouseover="this.style.color='#93c5fd'" onmouseout="this.style.color='#60a5fa'">🔗 ${link}</a>`).join('');
+        };
+        
+        document.getElementById('dash-src-instagram').innerHTML = renderList(stats.sources.instagram);
+        document.getElementById('dash-src-x').innerHTML = renderList(stats.sources.x);
+        document.getElementById('dash-src-threads').innerHTML = renderList(stats.sources.threads);
+        document.getElementById('dash-dest-fanpage').innerHTML = renderList(stats.sources.fanpages);
+        
+        // 5. Hiển thị đường dẫn lưu trữ
+        document.getElementById('dash-path-input').textContent = config.input_img_dir || "-";
+        document.getElementById('dash-path-text').textContent = config.output_txt_dir || "-";
+        document.getElementById('dash-path-image').textContent = config.output_img_dir || "-";
+        
+        // 6. Mục lỗi gần nhất
+        const errSection = document.getElementById('dash-error-section');
+        const errList = document.getElementById('dash-error-list');
+        if (stats.errors && stats.errors.length > 0) {
+            errSection.style.display = 'block';
+            errList.innerHTML = stats.errors.map(err => `
+                <li style="margin-bottom: 4px; padding: 6px 10px; background: rgba(0,0,0,0.25); border-left: 3px solid #f43f5e; border-radius: 4px; word-break: break-all;">
+                    ${err}
+                </li>
+            `).join('');
+        } else {
+            errSection.style.display = 'none';
+        }
+        
+        // 7. Lịch sử reup gần nhất (Bảng)
+        const tableBody = document.getElementById('dash-history-table-body');
+        if (stats.history && stats.history.length > 0) {
+            tableBody.innerHTML = stats.history.map(row => {
+                let badgePlatform = "";
+                if (row.platform === "instagram") {
+                    badgePlatform = `<span style="background: rgba(244, 63, 94, 0.15); color: #f43f5e; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase;">Instagram</span>`;
+                } else if (row.platform === "x") {
+                    badgePlatform = `<span style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase;">X / Twitter</span>`;
+                } else if (row.platform === "threads") {
+                    badgePlatform = `<span style="background: rgba(255, 255, 255, 0.1); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase;">Threads</span>`;
+                } else {
+                    badgePlatform = `<span style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; padding: 2px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase;">${row.platform}</span>`;
+                }
+                
+                let badgeMedia = "";
+                if (row.media_type === "image") {
+                    badgeMedia = `🖼️ Ảnh`;
+                } else if (row.media_type === "video") {
+                    badgeMedia = `🎥 Video`;
+                } else if (row.media_type === "text") {
+                    badgeMedia = `📝 Chữ`;
+                } else {
+                    badgeMedia = `❓ Lịch sử`;
+                }
+                
+                // Tạo link bài viết gốc và nút Đăng thẳng thủ công
+                let actionBtn = "";
+                if (row.post_id && row.post_id.length > 2) {
+                    let targetUrl = "";
+                    if (row.platform === "instagram") targetUrl = `https://www.instagram.com/p/${row.post_id}/`;
+                    else if (row.platform === "x") targetUrl = `https://x.com/x/status/${row.post_id}`;
+                    else if (row.platform === "threads") targetUrl = `https://www.threads.net/post/${row.post_id}`;
+                    
+                    if (targetUrl) {
+                        actionBtn += `<a href="${targetUrl}" target="_blank" style="display: inline-block; background: rgba(255, 255, 255, 0.05); color: #cbd5e1; border: 1px solid rgba(255, 255, 255, 0.1); padding: 2px 6px; border-radius: 4px; text-decoration: none; font-size: 0.7rem; margin-right: 6px; transition: all 0.2s;" onmouseover="this.style.background='rgba(255, 255, 255, 0.1)'" onmouseout="this.style.background='rgba(255, 255, 255, 0.05)'">Xem ↗</a>`;
+                    }
+                    
+                    actionBtn += `<button onclick="reupPostManual('${profile}', '${row.platform}', '${row.post_id}', this, false)" style="display: inline-block; background: rgba(99, 102, 241, 0.15); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; margin-right: 6px; transition: all 0.2s;" onmouseover="this.style.background='rgba(99, 102, 241, 0.3)'" onmouseout="this.style.background='rgba(99, 102, 241, 0.15)'">⚡ Đăng thẳng</button>`;
+                    
+                    actionBtn += `<button onclick="reupPostManual('${profile}', '${row.platform}', '${row.post_id}', this, true)" style="display: inline-block; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(16, 185, 129, 0.3)'" onmouseout="this.style.background='rgba(16, 185, 129, 0.15)'">⚡ Đăng gốc</button>`;
+                } else {
+                    actionBtn = "-";
+                }
+                
+                return `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.01)'" onmouseout="this.style.background='transparent'">
+                        <td style="padding: 10px 8px;">${badgePlatform}</td>
+                        <td style="padding: 10px 8px; font-family: monospace; font-size: 0.8rem; color: rgba(255,255,255,0.6);">${row.post_id}</td>
+                        <td style="padding: 10px 8px; color: var(--text-secondary);">${badgeMedia}</td>
+                        <td style="padding: 10px 8px; color: var(--text-secondary); font-size: 0.8rem;">${row.processed_at}</td>
+                        <td style="padding: 10px 8px; text-align: right;">${actionBtn}</td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 25px; color: var(--text-muted); font-style: italic;">
+                        Chưa có lịch sử reup nào được lưu trữ cho profile này.
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // 8. Cập nhật thời gian
+        const now = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        document.getElementById('dash-last-updated').textContent = `Cập nhật lần cuối: ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+        
+    } catch (e) {
+        console.error("Lỗi khi update dashboard stats:", e);
+    }
+}
+
 setInterval(fetchStatus, 2000);
 fetchStatus();
 loadGlobalConfig();
@@ -797,3 +1073,80 @@ loadGlobalConfig();
 document.addEventListener('DOMContentLoaded', () => {
     initGlobalControlsAccordion();
 });
+
+let pendingReupRequest = null;
+
+function closeReupModeModal() {
+    document.getElementById('reup-mode-modal').style.display = 'none';
+}
+
+function confirmReupMode(testMode) {
+    if (!pendingReupRequest) return;
+    const { profile, platform, postId, buttonEl, bypassAi } = pendingReupRequest;
+    closeReupModeModal();
+    executeReupPostManual(profile, platform, postId, buttonEl, bypassAi, testMode);
+}
+
+function reupPostManual(profile, platform, postId, buttonEl, bypassAi = false) {
+    const modeName = bypassAi ? "Gốc (Không qua AI)" : "Thẳng (Có qua AI)";
+    document.getElementById('reup-mode-desc').innerHTML = `Bạn muốn chạy đăng thủ công bài viết này (<strong>${platform.toUpperCase()} ID: ${postId}</strong>) dưới chế độ Đăng <strong>${modeName}</strong> nào?`;
+    
+    pendingReupRequest = { profile, platform, postId, buttonEl, bypassAi };
+    document.getElementById('reup-mode-modal').style.display = 'flex';
+}
+
+async function executeReupPostManual(profile, platform, postId, buttonEl, bypassAi, testMode) {
+    // Disable button and show loading state
+    const originalHtml = buttonEl.innerHTML;
+    buttonEl.disabled = true;
+    buttonEl.innerHTML = "⏳ Đang đăng...";
+    buttonEl.style.background = "rgba(245, 158, 11, 0.2)";
+    buttonEl.style.color = "#fbbf24";
+    buttonEl.style.borderColor = "rgba(245, 158, 11, 0.4)";
+    
+    try {
+        const response = await fetch(`/api/reup_post_manual/${profile}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                platform: platform, 
+                post_id: postId, 
+                bypass_ai: bypassAi,
+                test_mode: testMode
+            })
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message);
+        } else {
+            alert("Lỗi: " + data.message);
+            // Restore button if failed to trigger
+            buttonEl.disabled = false;
+            buttonEl.innerHTML = originalHtml;
+            if (bypassAi) {
+                buttonEl.style.background = "rgba(16, 185, 129, 0.15)";
+                buttonEl.style.color = "#34d399";
+                buttonEl.style.borderColor = "rgba(16, 185, 129, 0.3)";
+            } else {
+                buttonEl.style.background = "rgba(99, 102, 241, 0.15)";
+                buttonEl.style.color = "#a5b4fc";
+                buttonEl.style.borderColor = "rgba(99, 102, 241, 0.3)";
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Lỗi kết nối khi gửi lệnh đăng thủ công!");
+        buttonEl.disabled = false;
+        buttonEl.innerHTML = originalHtml;
+        if (bypassAi) {
+            buttonEl.style.background = "rgba(16, 185, 129, 0.15)";
+            buttonEl.style.color = "#34d399";
+            buttonEl.style.borderColor = "rgba(16, 185, 129, 0.3)";
+        } else {
+            buttonEl.style.background = "rgba(99, 102, 241, 0.15)";
+            buttonEl.style.color = "#a5b4fc";
+            buttonEl.style.borderColor = "rgba(99, 102, 241, 0.3)";
+        }
+    }
+}

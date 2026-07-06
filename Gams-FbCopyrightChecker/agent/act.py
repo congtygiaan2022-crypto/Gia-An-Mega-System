@@ -93,8 +93,24 @@ def build_driver_for_account(uid: str = ""):
 
     if cfg.get("headless", False):
         options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--start-maximized")
+
+    mobile_cfg = CONFIG.get("mobile_settings", {})
+    is_mobile = False # Luôn khởi động ở chế độ PC
+    if is_mobile:
+        log.info("Mobile mode enabled, skipping start-maximized options.")
+        user_agents = mobile_cfg.get("user_agents", [])
+        if not user_agents:
+            user_agents = [
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1"
+            ]
+        window_idx = mobile_cfg.get("window_index", 0)
+        mobile_ua = user_agents[window_idx % len(user_agents)]
+        options.add_argument(f"--user-agent={mobile_ua}")
+        log.info(f"Loaded Mobile User Agent for Chrome startup (act.py): {mobile_ua}")
+    else:
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--start-maximized")
+
     options.add_argument("--disable-hang-monitor")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-dev-shm-usage")
@@ -113,6 +129,14 @@ def build_driver_for_account(uid: str = ""):
     driver.implicitly_wait(cfg.get("implicit_wait", 10))
     driver.set_page_load_timeout(cfg.get("page_load_timeout", 30))
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+
+    if is_mobile:
+        from modules.fb_login import configure_window_layout
+        window_index = mobile_cfg.get("window_index", 0)
+        grid_rows = mobile_cfg.get("grid_rows", 1)
+        grid_cols = mobile_cfg.get("grid_cols", 1)
+        configure_window_layout(driver, is_mobile, window_index, grid_rows, grid_cols)
+
     log.info(f"Chrome driver initialized for uid={uid or 'default'} → {profile_dir}")
     return driver
 

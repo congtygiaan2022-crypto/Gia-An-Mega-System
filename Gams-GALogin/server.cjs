@@ -3,7 +3,21 @@ const express = require('express');
 const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
-const { spawn, execSync } = require('child_process');
+const { execSync } = require('child_process');
+
+// Import Decoupled Modules
+const ProfileManager = require('./server/modules/ProfileManager.cjs');
+const BrowserManager = require('./server/modules/BrowserManager.cjs');
+const LaunchEngine = require('./server/modules/LaunchEngine.cjs');
+const WindowManager = require('./server/modules/WindowManager.cjs');
+const UserAgentManager = require('./server/modules/UserAgentManager.cjs');
+const ProxyManager = require('./server/modules/ProxyManager.cjs');
+const ExtensionManager = require('./server/modules/ExtensionManager.cjs');
+const TemplateManager = require('./server/modules/TemplateManager.cjs');
+const ImportExportManager = require('./server/modules/ImportExportManager.cjs');
+const LoggingManager = require('./server/modules/LoggingManager.cjs');
+const ResourceMonitor = require('./server/modules/ResourceMonitor.cjs');
+const ProxyChecker = require('./server/modules/ProxyChecker.cjs');
 
 const app = express();
 const PORT = process.env.PORT || 1020;
@@ -13,30 +27,51 @@ const MAIL_SMTP_HOST = process.env.MAIL_SMTP_HOST || 'smtp.gmail.com';
 const MAIL_SMTP_PORT = process.env.MAIL_SMTP_PORT || '587';
 const MAIL_SMTP_USER = process.env.MAIL_SMTP_USER || 'no-reply@giaancompany.io.vn';
 const MAIL_SMTP_PASS = process.env.MAIL_SMTP_PASS || '';
-const DB_FILE = path.join(__dirname, 'profiles.json');
-const CHROMIUM_EXE = path.join(__dirname, 'bin', 'chromium', 'chrome-win', 'chrome.exe');
-const PROFILES_DIR = path.join(__dirname, 'bin', 'profiles');
 
-// Full CORS - Allow all external software (GenLogin, GPMLogin, automation tools) to connect
+const DB_FILE = path.join(__dirname, 'profiles.json');
+const PROFILES_DIR = path.join(__dirname, 'bin', 'profiles');
+const EXTENSIONS_DIR = path.join(__dirname, 'bin', 'extensions');
+
+// Instantiate Modular OOP Managers
+const profileManager = new ProfileManager(DB_FILE, PROFILES_DIR);
+const browserManager = new BrowserManager();
+const proxyManager = new ProxyManager(PROFILES_DIR);
+const extensionManager = new ExtensionManager(EXTENSIONS_DIR);
+const windowManager = new WindowManager();
+const loggingManager = new LoggingManager(PROFILES_DIR);
+const userAgentManager = new UserAgentManager();
+const templateManager = new TemplateManager();
+const importExportManager = new ImportExportManager(profileManager, PROFILES_DIR);
+const resourceMonitor = new ResourceMonitor();
+
+const launchEngine = new LaunchEngine(
+  browserManager,
+  proxyManager,
+  extensionManager,
+  windowManager,
+  loggingManager
+);
+
+// Full CORS support
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
   credentials: false
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
-// Health check - Verify server is alive
+// Health / Status Check
 app.get('/', (req, res) => {
-  const profiles = loadProfiles();
+  const profiles = profileManager.loadProfiles();
   res.json({
     status: 'ok',
-    name: 'Gams-GALogin API Server',
-    version: '2.4.1',
+    name: 'Gams-GALogin API Server (Modular Redesign)',
+    version: '3.0.0',
     port: PORT,
     profilesCount: profiles.length,
-    message: 'Gams-GALogin API Server is running and ready to accept connections.'
+    message: 'Gams-GALogin API Server is running in Decoupled Architecture mode.'
   });
 });
 
@@ -44,105 +79,384 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });
 });
 
-// Memory store for tracking active browser processes
-// Key: profileId, Value: { process, port, pid }
-const activeBrowsers = new Map();
+// ----------------- PROFILE MANAGER API -----------------
 
-// Helper to load profiles from JSON file
-function loadProfiles() {
-  let profiles = [];
-  if (!fs.existsSync(DB_FILE)) {
-    // Seed default profiles
-    const defaultProfiles = [
-      {
-        id: 'p-1',
-        name: 'Facebook Ad Account 01',
-        status: 'stopped',
-        proxy: '45.138.22.112:8000',
-        browserVersion: 'Chromium 122.0',
-        lastOpened: '2026-06-10 18:45',
-        notes: 'Tài khoản quảng cáo chính cho chiến dịch Thương mại điện tử',
-        group: 'Facebook Ads',
-        cookiesCount: 142,
-        platform: 'Windows',
-        userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        port: 15001
-      },
-      {
-        id: 'p-2',
-        name: 'Google Ads Agency Profile',
-        status: 'stopped',
-        proxy: '185.220.101.5:9050',
-        browserVersion: 'Chromium 122.0',
-        lastOpened: '2026-06-11 04:30',
-        notes: 'Tài khoản Agency cho Khách hàng Alpha',
-        group: 'Google Ads',
-        cookiesCount: 89,
-        platform: 'macOS',
-        userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        port: 15002
-      },
-      {
-        id: 'p-3',
-        name: 'TikTok Creator Hub - Beta',
-        status: 'stopped',
-        proxy: 'No Proxy (Direct)',
-        browserVersion: 'Chromium 120.0',
-        lastOpened: '2026-06-08 11:20',
-        notes: 'Bảng điều khiển nhà sáng tạo để tải lên nội dung lan truyền',
-        group: 'TikTok',
-        cookiesCount: 204,
-        platform: 'Linux',
-        userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        port: 15003
-      }
-    ];
-    fs.writeFileSync(DB_FILE, JSON.stringify(defaultProfiles, null, 2));
-    profiles = defaultProfiles;
-  } else {
-    try {
-      const raw = fs.readFileSync(DB_FILE);
-      profiles = JSON.parse(raw);
-    } catch (err) {
-      console.error('Error reading profiles database:', err);
-      profiles = [];
+const listProfilesHandler = (req, res) => {
+  const profiles = profileManager.loadProfiles();
+  const updatedProfiles = profiles.map(p => ({
+    ...p,
+    status: launchEngine.getStatus(p.id)
+  }));
+  res.json(updatedProfiles);
+};
+
+const getProfileByIdHandler = (req, res) => {
+  const id = req.params.id || req.query.id;
+  const profile = profileManager.getProfile(id);
+  if (!profile) return res.status(404).json({ error: 'Không tìm thấy profile' });
+  
+  res.json({
+    ...profile,
+    status: launchEngine.getStatus(profile.id)
+  });
+};
+
+const createProfileHandler = (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
+  // Resolve template defaults if templateId is provided
+  let initialData = req.body;
+  if (req.body.templateId) {
+    const templates = templateManager.loadTemplates();
+    const template = templates.find(t => t.id === req.body.templateId);
+    if (template) {
+      // Merge template configuration fields
+      const generatedUA = userAgentManager.generateUserAgent(
+        template.userAgentPolicy, 
+        req.body.platform || 'Windows'
+      );
+      initialData = {
+        ...template,
+        name,
+        userAgent: generatedUA,
+        proxyConfig: req.body.proxyConfig || template.proxyConfig,
+        group: req.body.group || template.group || 'Facebook Ads',
+        id: undefined // let profileManager assign a fresh ID
+      };
     }
   }
 
-  // Ensure every profile has a unique, fixed debugging port assigned permanently
-  let changed = false;
-  profiles.forEach(p => {
-    if (!p.port) {
-      const existingPorts = profiles.map(x => x.port).filter(Boolean);
-      let candidate = 15001;
-      while (existingPorts.includes(candidate)) {
-        candidate++;
+  const newProfile = profileManager.createProfile(initialData);
+  res.json(newProfile);
+};
+
+const updateProfileHandler = (req, res) => {
+  const id = req.params.profile_id || req.params.id || req.body.id || req.query.id;
+  const profile = profileManager.getProfile(id);
+  if (!profile) return res.status(404).json({ error: 'Không tìm thấy profile' });
+
+  const updated = profileManager.updateProfile(id, req.body);
+  res.json({ success: true, profile: updated });
+};
+
+const deleteProfileHandler = (req, res) => {
+  const id = req.params.id || req.query.id;
+  const deleted = profileManager.deleteProfile(id);
+  res.json({ success: deleted });
+};
+
+const cloneProfileHandler = (req, res) => {
+  const id = req.params.id || req.body.id || req.query.id;
+  const cloned = profileManager.cloneProfile(id);
+  if (!cloned) return res.status(404).json({ error: 'Không tìm thấy profile nguồn' });
+  res.json(cloned);
+};
+
+// ----------------- LAUNCH ENGINE API -----------------
+
+const startProfileHandler = async (req, res) => {
+  const id = req.params.id || req.query.id;
+  if (!id) return res.status(400).json({ success: false, error: 'id is required' });
+
+  const profile = profileManager.getProfile(id);
+  if (!profile) return res.status(404).json({ error: 'Profile không tồn tại' });
+
+  // Get layout parameters if starting concurrently
+  const layoutMode = req.query.layoutMode || req.body?.layoutMode || 'none';
+  const layoutIndex = parseInt(req.query.layoutIndex || req.body?.layoutIndex || 0, 10);
+  const layoutTotal = parseInt(req.query.layoutTotal || req.body?.layoutTotal || 1, 10);
+  const screenWidth = parseInt(req.query.screenWidth || req.body?.screenWidth || 1920, 10);
+  const screenHeight = parseInt(req.query.screenHeight || req.body?.screenHeight || 1080, 10);
+
+  // Dynamic proxy geolocation auto-alignment to prevent Whoer.net mismatch
+  let activeProxyConfig = null;
+  const potentialProxies = [];
+  if (profile.proxyConfig && profile.proxyConfig.type && profile.proxyConfig.type !== 'Direct') {
+    potentialProxies.push(profile.proxyConfig);
+  }
+  if (Array.isArray(profile.fallbackProxies)) {
+    profile.fallbackProxies.forEach(p => {
+      if (p && p.type && p.type !== 'Direct') {
+        potentialProxies.push(p);
       }
-      p.port = candidate;
-      changed = true;
+    });
+  }
+
+  if (potentialProxies.length > 0) {
+    const ProxyChecker = require('./server/modules/ProxyChecker.cjs');
+    let foundLive = false;
+    
+    for (const cfg of potentialProxies) {
+      try {
+        console.log(`[ProxyCheck] Testing proxy ${cfg.host}:${cfg.port}...`);
+        const checkResult = await ProxyChecker.check(cfg);
+        if (checkResult.success) {
+          activeProxyConfig = cfg;
+          foundLive = true;
+          
+          profile.timezone = checkResult.timezone || 'Asia/Ho_Chi_Minh';
+          const countryCode = checkResult.countryCode || 'US';
+          const langMap = {
+            'US': 'en-US,en;q=0.9',
+            'VN': 'vi-VN,vi;q=0.9,en-US;q=0.8',
+            'GB': 'en-GB,en;q=0.9',
+            'DE': 'de-DE,de;q=0.9',
+            'FR': 'fr-FR,fr;q=0.9',
+            'JP': 'ja-JP,ja;q=0.9',
+            'CN': 'zh-CN,zh;q=0.9',
+            'KR': 'ko-KR,ko;q=0.9',
+            'SG': 'en-SG,en;q=0.9'
+          };
+          profile.language = langMap[countryCode] || 'en-US,en;q=0.9';
+          
+          // Update profile with the working proxy config as active proxy
+          profile.proxyConfig = activeProxyConfig;
+          profile.proxy = `${activeProxyConfig.host}:${activeProxyConfig.port} (${activeProxyConfig.type})`;
+          
+          profileManager.updateProfile(profile.id, {
+            proxyConfig: profile.proxyConfig,
+            proxy: profile.proxy,
+            timezone: profile.timezone,
+            language: profile.language
+          });
+          
+          console.log(`[ProxyCheck] Proxy ${cfg.host}:${cfg.port} is LIVE. Timezone: ${profile.timezone}`);
+          break;
+        } else {
+          console.warn(`[ProxyCheck] Proxy ${cfg.host}:${cfg.port} is DEAD: ${checkResult.error}`);
+        }
+      } catch (e) {
+        console.error(`[ProxyCheck] Failed checking ${cfg.host}:${cfg.port}: ${e.message}`);
+      }
+    }
+    
+    if (!foundLive) {
+      return res.status(500).json({ error: 'Không thể khởi chạy: Tất cả các proxy được gán đều không hoạt động (Die).' });
+    }
+  }
+
+  try {
+    const runningRecord = await launchEngine.start(profile, {
+      layoutMode,
+      layoutIndex,
+      layoutTotal,
+      screenWidth,
+      screenHeight
+    });
+
+    res.json({
+      success: true,
+      status: "success",
+      port: runningRecord.port,
+      seleniumPort: runningRecord.port,
+      remote_debugging_port: runningRecord.port,
+      pid: runningRecord.pid,
+      wsUrl: `ws://127.0.0.1:${runningRecord.port}/devtools/browser`,
+      wsEndpoint: `ws://127.0.0.1:${runningRecord.port}/devtools/browser`
+    });
+  } catch (err) {
+    res.status(500).json({ error: `Không thể khởi chạy: ${err.message}` });
+  }
+};
+
+const closeProfileHandler = async (req, res) => {
+  const id = req.params.id || req.query.id;
+  if (!id) return res.status(400).json({ success: false, error: 'id is required' });
+
+  const stopped = await launchEngine.stop(id);
+  res.json({ success: true, status: "success", stopped });
+};
+
+const checkStatusHandler = (req, res) => {
+  const id = req.params.id || req.query.id || req.body.id;
+  const isRunning = launchEngine.getStatus(id) === 'running';
+  const record = launchEngine.getActiveRecord(id);
+  
+  res.json({
+    isRunning,
+    pid: isRunning ? record.pid : null
+  });
+};
+
+const startGroupHandler = async (req, res) => {
+  const { groupName } = req.params;
+  const profiles = profileManager.loadProfiles().filter(p => p.group === groupName);
+  const started = [];
+  
+  for (let i = 0; i < profiles.length; i++) {
+    try {
+      const p = profiles[i];
+      const record = await launchEngine.start(p, {
+        layoutMode: 'grid',
+        layoutIndex: i,
+        layoutTotal: profiles.length
+      });
+      started.push({ id: p.id, pid: record.pid });
+    } catch (e) {
+      // Continue starting others
+    }
+  }
+  res.json({ success: true, started });
+};
+
+const stopGroupHandler = async (req, res) => {
+  const { groupName } = req.params;
+  const profiles = profileManager.loadProfiles().filter(p => p.group === groupName);
+  let count = 0;
+  for (const p of profiles) {
+    const stopped = await launchEngine.stop(p.id);
+    if (stopped) count++;
+  }
+  res.json({ success: true, stoppedCount: count });
+};
+
+// ----------------- WINDOW MANAGER API -----------------
+
+const arrangeWindowsHandler = (req, res) => {
+  const { ids, layoutMode, screenWidth, screenHeight } = req.body;
+  if (!Array.isArray(ids)) return res.status(400).json({ error: 'ids array required' });
+
+  const activeIds = ids.filter(id => launchEngine.getStatus(id) === 'running');
+  const total = activeIds.length;
+
+  activeIds.forEach((id, index) => {
+    const record = launchEngine.getActiveRecord(id);
+    if (record && record.pid) {
+      const bounds = windowManager.calculateBounds(index, total, layoutMode, screenWidth || 1920, screenHeight || 1080);
+      windowManager.repositionWindow(record.pid, bounds.x, bounds.y, bounds.width, bounds.height);
     }
   });
 
-  if (changed) {
-    fs.writeFileSync(DB_FILE, JSON.stringify(profiles, null, 2));
+  res.json({ success: true, arrangedCount: total });
+};
+
+// ----------------- USER AGENT MANAGER API -----------------
+
+const getUserAgentsHandler = (req, res) => {
+  res.json(userAgentManager.loadUserAgents());
+};
+
+const addUserAgentHandler = (req, res) => {
+  const { ua, platform } = req.body;
+  if (!ua) return res.status(400).json({ error: 'User Agent string is required' });
+  const added = userAgentManager.addUserAgent(ua, platform || 'Windows');
+  res.json(added);
+};
+
+const updateUserAgentHandler = (req, res) => {
+  const { id } = req.params;
+  const { ua, platform } = req.body;
+  const updated = userAgentManager.updateUserAgent(id, ua, platform);
+  if (!updated) return res.status(404).json({ error: 'User Agent not found' });
+  res.json(updated);
+};
+
+const deleteUserAgentHandler = (req, res) => {
+  const { id } = req.params;
+  const deleted = userAgentManager.deleteUserAgent(id);
+  res.json({ success: deleted });
+};
+
+const importUserAgentsHandler = (req, res) => {
+  const { type, txt, json, platform } = req.body;
+  let count = 0;
+  if (type === 'text' && txt) {
+    count = userAgentManager.importTxt(txt, platform || 'Windows');
+  } else if (type === 'json' && json) {
+    count = userAgentManager.importJson(json);
+  } else {
+    return res.status(400).json({ error: 'Invalid import payload' });
   }
+  res.json({ success: true, count });
+};
 
-  return profiles;
-}
+const exportUserAgentsHandler = (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', 'attachment; filename=user_agents.json');
+  res.send(userAgentManager.exportJson());
+};
 
-// Helper to save profiles
-function saveProfiles(profiles) {
-  fs.writeFileSync(DB_FILE, JSON.stringify(profiles, null, 2));
-}
+// ----------------- TEMPLATE MANAGER API -----------------
 
-// Ensure profiles directory exists
-if (!fs.existsSync(PROFILES_DIR)) {
-  fs.mkdirSync(PROFILES_DIR, { recursive: true });
-}
+const getTemplatesHandler = (req, res) => {
+  res.json(templateManager.loadTemplates());
+};
 
-// ----------------- API ROUTES -----------------
+const createTemplateHandler = (req, res) => {
+  const created = templateManager.createTemplate(req.body);
+  res.json(created);
+};
 
-// GET /api/browser_versions
+const updateTemplateHandler = (req, res) => {
+  const { id } = req.params;
+  const updated = templateManager.updateTemplate(id, req.body);
+  if (!updated) return res.status(404).json({ error: 'Template not found' });
+  res.json(updated);
+};
+
+const deleteTemplateHandler = (req, res) => {
+  const { id } = req.params;
+  const deleted = templateManager.deleteTemplate(id);
+  res.json({ success: deleted });
+};
+
+// ----------------- IMPORT / EXPORT API -----------------
+
+const exportProfileFileHandler = (req, res) => {
+  const { id } = req.params;
+  try {
+    const zipPath = importExportManager.exportProfile(id);
+    res.download(zipPath);
+  } catch (err) {
+    res.status(500).json({ error: `Export failed: ${err.message}` });
+  }
+};
+
+const importProfileFileHandler = (req, res) => {
+  const { zipData } = req.body; // base64 representation of the zip file
+  if (!zipData) return res.status(400).json({ error: 'zipData base64 payload is required' });
+
+  try {
+    const tempZipPath = path.join(__dirname, 'bin', `temp_import_${Date.now()}.zip`);
+    fs.writeFileSync(tempZipPath, Buffer.from(zipData, 'base64'));
+    
+    const imported = importExportManager.importProfile(tempZipPath);
+    fs.unlinkSync(tempZipPath);
+    
+    res.json({ success: true, profile: imported });
+  } catch (err) {
+    res.status(500).json({ error: `Import failed: ${err.message}` });
+  }
+};
+
+// ----------------- LOGGING API -----------------
+
+const getProfileLogsHandler = (req, res) => {
+  const { id } = req.params;
+  const logs = loggingManager.readLogs(id);
+  res.json({ logs });
+};
+
+const clearProfileLogsHandler = (req, res) => {
+  const { id } = req.params;
+  const cleared = loggingManager.clearLogs(id);
+  res.json({ success: cleared });
+};
+
+// ----------------- RESOURCE MONITOR API -----------------
+
+const getResourceMonitorHandler = async (req, res) => {
+  const statsMap = await resourceMonitor.scanResources(launchEngine.activeBrowsers);
+  const statsObj = {};
+  statsMap.forEach((val, key) => {
+    statsObj[key] = val;
+  });
+  res.json(statsObj);
+};
+
+// ----------------- COMPATIBILITY ALIASES -----------------
+
 const getBrowserVersionsHandler = (req, res) => {
   res.json([
     { version: 'Chromium 125.0', stable: true },
@@ -151,18 +465,18 @@ const getBrowserVersionsHandler = (req, res) => {
   ]);
 };
 
-// GET /api/groups
 const getGroupsHandler = (req, res) => {
-  res.json([
-    { id: 'g-1', name: 'Facebook Ads' },
-    { id: 'g-2', name: 'Google Ads' },
-    { id: 'g-3', name: 'TikTok' },
-    { id: 'g-4', name: 'Ecommerce' },
-    { id: 'g-5', name: 'Social Bots' }
-  ]);
+  const profiles = profileManager.loadProfiles();
+  const set = new Set(profiles.map(p => p.group).filter(Boolean));
+  if (set.size === 0) {
+    set.add('Facebook Ads');
+    set.add('Google Ads');
+    set.add('TikTok');
+  }
+  const groupsList = Array.from(set).map((name, i) => ({ id: `g-${i}`, name }));
+  res.json(groupsList);
 };
 
-// GET /api/locations
 const getLocationsHandler = (req, res) => {
   res.json([
     { country: 'United States', ip: '45.138.22.112' },
@@ -171,368 +485,114 @@ const getLocationsHandler = (req, res) => {
   ]);
 };
 
-// GET /api/profiles
-const listProfilesHandler = (req, res) => {
-  const profiles = loadProfiles();
-  const updatedProfiles = profiles.map(p => ({
-    ...p,
-    status: activeBrowsers.has(p.id) ? 'running' : 'stopped'
-  }));
-  res.json(updatedProfiles);
-};
-
-// GET /api/profile/:id
-const getProfileByIdHandler = (req, res) => {
-  const id = req.params.id || req.query.id;
-  const profiles = loadProfiles();
-  const profile = profiles.find(p => p.id === id);
-  if (!profile) return res.status(404).json({ error: 'Khong tim thay profile' });
-  
-  res.json({
-    ...profile,
-    status: activeBrowsers.has(profile.id) ? 'running' : 'stopped'
-  });
-};
-
-// POST /api/profiles/create
-const createProfileHandler = (req, res) => {
-  const { name, group, proxy, platform, userAgent, notes } = req.body;
-  if (!name) return res.status(400).json({ error: 'Name is required' });
-
-  const profiles = loadProfiles();
-  
-  // Assign a unique fixed port in range 15001-15999
-  const usedPorts = new Set(profiles.map(p => p.port).filter(Boolean));
-  let nextPort = 15001;
-  while (usedPorts.has(nextPort)) nextPort++;
-
-  const newProfile = {
-    id: `p-${Date.now()}`,
-    name,
-    group: group || 'Facebook Ads',
-    proxy: proxy || 'No Proxy (Direct)',
-    browserVersion: 'Chromium 125.0',
-    lastOpened: 'Chưa sử dụng',
-    notes: notes || '',
-    cookiesCount: 0,
-    platform: platform || 'Windows',
-    userAgent: userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-    port: nextPort
-  };
-
-  profiles.unshift(newProfile);
-  saveProfiles(profiles);
-  res.json(newProfile);
-};
-
-// POST /api/profiles/update/:profile_id
-const updateProfileHandler = (req, res) => {
-  const id = req.params.profile_id || req.body.id || req.query.id || req.query.profileId;
-  const profiles = loadProfiles();
-  const idx = profiles.findIndex(p => p.id === id);
-  if (idx === -1) return res.status(404).json({ error: 'Khong tim thay profile' });
-
-  profiles[idx] = { ...profiles[idx], ...req.body };
-  saveProfiles(profiles);
-  res.json({ success: true, profile: profiles[idx] });
-};
-
-// GET /api/profiles/delete/:id
-const deleteProfileHandler = (req, res) => {
-  const id = req.params.id || req.query.id;
-  const profiles = loadProfiles();
-  const filtered = profiles.filter(p => p.id !== id);
-  saveProfiles(filtered);
-  res.json({ success: true });
-};
-
-// GET /api/profiles/start/:id
-const startProfileHandler = (req, res) => {
-  const id = req.params.id || req.query.id;
-  if (!id) return res.status(400).json({ success: false, error: 'id is required' });
-
-  if (activeBrowsers.has(id)) {
-    const running = activeBrowsers.get(id);
-    return res.json({
-      success: true,
-      status: "success",
-      port: running.port,
-      seleniumPort: running.port,
-      remote_debugging_port: running.port,
-      pid: running.pid,
-      wsUrl: `ws://127.0.0.1:${running.port}/devtools/browser`,
-      wsEndpoint: `ws://127.0.0.1:${running.port}/devtools/browser`
-    });
-  }
-
-  const profiles = loadProfiles();
-  const profile = profiles.find(p => p.id === id);
-  if (!profile) return res.status(404).json({ error: 'Profile khong ton tai' });
-
-  // Check if Chromium binary exists
-  if (!fs.existsSync(CHROMIUM_EXE)) {
-    return res.status(500).json({
-      error: 'Chua tai Chromium! Vui long click chay file start-dashboard.bat de he thong tu dong tai Chromium.'
-    });
-  }
-
-  const port = profile.port || 15001;
-  const dataDir = path.join(PROFILES_DIR, id);
-
-  const args = [
-    `--user-data-dir=${dataDir}`,
-    `--remote-debugging-port=${port}`,
-    '--no-first-run',
-    '--no-default-browser-check',
-    '--window-size=1920,1080',
-    `--user-agent=${profile.userAgent}`
-  ];
-
-  if (profile.proxy && profile.proxy !== 'No Proxy (Direct)' && !profile.proxy.includes('Không sử dụng')) {
-    const match = profile.proxy.match(/([0-9.]+:[0-9]+)/);
-    if (match) {
-      args.push(`--proxy-server=${match[1]}`);
-    }
-  }
-
-  console.log(`Starting Chromium for Profile ${id} on fixed port ${port}...`);
-
-  try {
-    const child = spawn(CHROMIUM_EXE, args, {
-      detached: true,
-      stdio: 'ignore'
-    });
-    child.unref();
-
-    activeBrowsers.set(id, {
-      process: child,
-      port,
-      pid: child.pid
-    });
-
-    const now = new Date();
-    const timeString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    profile.lastOpened = timeString;
-    saveProfiles(profiles);
-
-    res.json({
-      success: true,
-      status: "success",
-      port: port,
-      seleniumPort: port,
-      remote_debugging_port: port,
-      pid: child.pid,
-      wsUrl: `ws://127.0.0.1:${port}/devtools/browser`,
-      wsEndpoint: `ws://127.0.0.1:${port}/devtools/browser`
-    });
-  } catch (err) {
-    console.error('Failed to spawn Chromium process:', err);
-    res.status(500).json({ error: 'Khong the khoi chay trinh duyet' });
-  }
-};
-
-// GET /api/profiles/close/:id
-const closeProfileHandler = (req, res) => {
-  const id = req.params.id || req.query.id;
-  if (!id) return res.status(400).json({ success: false, error: 'id is required' });
-
-  if (!activeBrowsers.has(id)) {
-    return res.json({ success: true, message: 'Browser da dong hoac khong chay', status: "success" });
-  }
-
-  const browser = activeBrowsers.get(id);
-  console.log(`Closing Chromium process for profile ${id} (PID ${browser.pid})...`);
-  
-  try {
-    execSync(`taskkill /pid ${browser.pid} /f /t`);
-  } catch (err) {
-    try {
-      process.kill(browser.pid, 'SIGKILL');
-    } catch (e) {
-      console.warn('Failed to kill PID using SIGKILL, might be already closed:', e.message);
-    }
-  }
-
-  activeBrowsers.delete(id);
-  res.json({ success: true, status: "success" });
-};
-
-// POST /api/profiles/check-status/:id
-const checkStatusHandler = (req, res) => {
-  const id = req.params.id || req.query.id || req.body.id;
-  const isRunning = activeBrowsers.has(id);
-  const browser = activeBrowsers.get(id);
-  
-  res.json({
-    isRunning,
-    pid: isRunning ? browser.pid : null
-  });
-};
-
-// GET /api/profiles/changeFingerprint
 const changeFingerprintHandler = (req, res) => {
   const { ids } = req.query;
   if (!ids) return res.status(400).json({ error: 'ids query param required' });
 
-  const profiles = loadProfiles();
   const idList = ids.split(',');
-  
   idList.forEach(id => {
-    const profile = profiles.find(p => p.id === id);
-    if (profile) {
-      const ver = Math.floor(Math.random() * 4) + 120;
-      profile.userAgent = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${ver}.0.0.0 Safari/537.36`;
-    }
+    const ver = Math.floor(Math.random() * 4) + 122;
+    const ua = `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${ver}.0.0.0 Safari/537.36`;
+    profileManager.updateProfile(id, { userAgent: ua });
   });
 
-  saveProfiles(profiles);
   res.json({ success: true });
 };
 
-// POST /api/profiles/resource/:id
-const resourceHandler = (req, res) => {
-  res.json({ success: true, message: 'Cap nhat resource thanh cong' });
-};
+// ----------------- REGISTER EXPRESS API ROUTES -----------------
 
-// ---- REGISTER COMPATIBILITY ROUTES FOR GENLOGIN, GPMLOGIN & GAMS-GALOGIN ----
-
-// Browser Versions
-app.get('/api/browser_versions', getBrowserVersionsHandler);
-app.get('/api/v1/browser_versions', getBrowserVersionsHandler);
-app.get('/api/v3/browser_versions', getBrowserVersionsHandler);
-
-// Groups
-app.get('/api/groups', getGroupsHandler);
-app.get('/api/v1/groups', getGroupsHandler);
-app.get('/api/v3/groups', getGroupsHandler);
-
-// Locations
-app.get('/api/locations', getLocationsHandler);
-app.get('/api/v1/locations', getLocationsHandler);
-app.get('/api/v3/locations', getLocationsHandler);
-
-// Profiles List
+// Profiles CRUD
 app.get('/api/profiles', listProfilesHandler);
 app.get('/api/v1/profiles', listProfilesHandler);
-app.get('/v1/profiles', listProfilesHandler);
+app.get('/api/v2/profiles', listProfilesHandler);
 app.get('/api/v3/profiles', listProfilesHandler);
-app.get('/v3/profiles', listProfilesHandler);
 
-// Get Profile By ID
 app.get('/api/profile/:id', getProfileByIdHandler);
-app.get('/api/profile', getProfileByIdHandler);
 app.get('/api/v1/profile/:id', getProfileByIdHandler);
-app.get('/api/v1/profile', getProfileByIdHandler);
+app.get('/api/v2/profile/:id', getProfileByIdHandler);
 app.get('/api/v3/profile/:id', getProfileByIdHandler);
-app.get('/api/v3/profile', getProfileByIdHandler);
 
-// Create Profile
 app.post('/api/profiles/create', createProfileHandler);
 app.post('/api/v1/profiles/create', createProfileHandler);
+app.post('/api/v2/profiles/create', createProfileHandler);
 app.post('/api/v3/profiles/create', createProfileHandler);
 
-// Update Profile
 app.post('/api/profiles/update/:profile_id', updateProfileHandler);
 app.post('/api/profiles/update', updateProfileHandler);
-app.post('/api/v1/profiles/update/:profile_id', updateProfileHandler);
 app.post('/api/v1/profiles/update', updateProfileHandler);
-app.post('/api/v3/profiles/update/:profile_id', updateProfileHandler);
+app.post('/api/v2/profiles/update', updateProfileHandler);
 app.post('/api/v3/profiles/update', updateProfileHandler);
 
-// Delete Profile
 app.get('/api/profiles/delete/:id', deleteProfileHandler);
-app.get('/api/profiles/delete', deleteProfileHandler);
 app.get('/api/v1/profiles/delete/:id', deleteProfileHandler);
-app.get('/api/v1/profiles/delete', deleteProfileHandler);
+app.get('/api/v2/profiles/delete/:id', deleteProfileHandler);
 app.get('/api/v3/profiles/delete/:id', deleteProfileHandler);
-app.get('/api/v3/profiles/delete', deleteProfileHandler);
+app.delete('/api/profiles/:id', deleteProfileHandler);
 
-// Start Profile
+app.post('/api/profiles/clone/:id', cloneProfileHandler);
+app.post('/api/profiles/clone', cloneProfileHandler);
+
+// Launch Actions
 app.get('/api/profiles/start/:id', startProfileHandler);
+app.post('/api/profiles/start/:id', startProfileHandler);
 app.get('/api/profiles/start', startProfileHandler);
-app.get('/api/v1/profiles/start/:id', startProfileHandler);
-app.get('/api/v1/profiles/start', startProfileHandler);
-app.get('/v1/profiles/start', startProfileHandler);
-app.get('/api/v3/profiles/start/:id', startProfileHandler);
-app.get('/api/v3/profiles/start', startProfileHandler);
-app.get('/v3/profiles/start', startProfileHandler);
 
-// Close Profile
 app.get('/api/profiles/close/:id', closeProfileHandler);
+app.post('/api/profiles/close/:id', closeProfileHandler);
 app.get('/api/profiles/close', closeProfileHandler);
-app.get('/api/v1/profiles/close/:id', closeProfileHandler);
-app.get('/api/v1/profiles/close', closeProfileHandler);
-app.get('/v1/profiles/close', closeProfileHandler);
-app.get('/api/v3/profiles/close/:id', closeProfileHandler);
-app.get('/api/v3/profiles/close', closeProfileHandler);
-app.get('/v3/profiles/close', closeProfileHandler);
 
-// Check Status
 app.post('/api/profiles/check-status/:id', checkStatusHandler);
 app.post('/api/profiles/check-status', checkStatusHandler);
-app.post('/api/v1/profiles/check-status/:id', checkStatusHandler);
-app.post('/api/v1/profiles/check-status', checkStatusHandler);
-app.post('/api/v3/profiles/check-status/:id', checkStatusHandler);
-app.post('/api/v3/profiles/check-status', checkStatusHandler);
 
-// Change Fingerprint
+app.post('/api/profiles/start-group/:groupName', startGroupHandler);
+app.post('/api/profiles/stop-group/:groupName', stopGroupHandler);
+
+// Window Manager Layouts
+app.post('/api/profiles/arrange', arrangeWindowsHandler);
+
+// Proxy Geolocation Checker
+app.post('/api/proxies/check', async (req, res) => {
+  try {
+    const result = await ProxyChecker.check(req.body);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// User Agent Manager
+app.get('/api/user-agents', getUserAgentsHandler);
+app.post('/api/user-agents', addUserAgentHandler);
+app.put('/api/user-agents/:id', updateUserAgentHandler);
+app.delete('/api/user-agents/:id', deleteUserAgentHandler);
+app.post('/api/user-agents/import', importUserAgentsHandler);
+app.get('/api/user-agents/export', exportUserAgentsHandler);
+
+// Templates Manager
+app.get('/api/templates', getTemplatesHandler);
+app.post('/api/templates', createTemplateHandler);
+app.put('/api/templates/:id', updateTemplateHandler);
+app.delete('/api/templates/:id', deleteTemplateHandler);
+
+// Import / Export
+app.get('/api/profiles/export/:id', exportProfileFileHandler);
+app.post('/api/profiles/import', importProfileFileHandler);
+
+// Profile Logs
+app.get('/api/profiles/logs/:id', getProfileLogsHandler);
+app.delete('/api/profiles/logs/:id', clearProfileLogsHandler);
+
+// Resource monitor polling
+app.get('/api/profiles/monitor', getResourceMonitorHandler);
+
+// Compatibility Extras
+app.get('/api/browser_versions', getBrowserVersionsHandler);
+app.get('/api/groups', getGroupsHandler);
+app.get('/api/locations', getLocationsHandler);
 app.get('/api/profiles/changeFingerprint', changeFingerprintHandler);
-app.get('/api/v1/profiles/changeFingerprint', changeFingerprintHandler);
-app.get('/api/v3/profiles/changeFingerprint', changeFingerprintHandler);
+app.post('/api/profiles/resource/:id', (req, res) => res.json({ success: true }));
 
-// Resource Hardware Update
-app.post('/api/profiles/resource/:id', resourceHandler);
-app.post('/api/v1/profiles/resource/:id', resourceHandler);
-app.post('/api/v3/profiles/resource/:id', resourceHandler);
-
-// ---- ADDITIONAL v2 ALIASES ----
-app.get('/api/v2/browser_versions', getBrowserVersionsHandler);
-app.get('/api/v2/groups', getGroupsHandler);
-app.get('/api/v2/locations', getLocationsHandler);
-app.get('/api/v2/profiles', listProfilesHandler);
-app.get('/v2/profiles', listProfilesHandler);
-app.get('/api/v2/profile/:id', getProfileByIdHandler);
-app.get('/api/v2/profile', getProfileByIdHandler);
-app.post('/api/v2/profiles/create', createProfileHandler);
-app.post('/api/v2/profiles/update/:profile_id', updateProfileHandler);
-app.post('/api/v2/profiles/update', updateProfileHandler);
-app.get('/api/v2/profiles/delete/:id', deleteProfileHandler);
-app.get('/api/v2/profiles/delete', deleteProfileHandler);
-app.get('/api/v2/profiles/start/:id', startProfileHandler);
-app.get('/api/v2/profiles/start', startProfileHandler);
-app.get('/v2/profiles/start', startProfileHandler);
-app.get('/api/v2/profiles/close/:id', closeProfileHandler);
-app.get('/api/v2/profiles/close', closeProfileHandler);
-app.get('/v2/profiles/close', closeProfileHandler);
-app.post('/api/v2/profiles/check-status/:id', checkStatusHandler);
-app.post('/api/v2/profiles/check-status', checkStatusHandler);
-app.get('/api/v2/profiles/changeFingerprint', changeFingerprintHandler);
-app.post('/api/v2/profiles/resource/:id', resourceHandler);
-
-// ---- DELETE/POST METHOD ALIASES (some tools use DELETE or POST for close/delete) ----
-app.delete('/api/profiles/:id', deleteProfileHandler);
-app.delete('/api/v1/profiles/:id', deleteProfileHandler);
-app.delete('/api/v2/profiles/:id', deleteProfileHandler);
-app.delete('/api/v3/profiles/:id', deleteProfileHandler);
-app.post('/api/profiles/close/:id', closeProfileHandler);
-app.post('/api/profiles/close', closeProfileHandler);
-app.post('/api/v1/profiles/close/:id', closeProfileHandler);
-app.post('/api/v1/profiles/close', closeProfileHandler);
-app.post('/api/v2/profiles/close/:id', closeProfileHandler);
-app.post('/api/v2/profiles/close', closeProfileHandler);
-app.post('/api/v3/profiles/close/:id', closeProfileHandler);
-app.post('/api/v3/profiles/close', closeProfileHandler);
-app.post('/api/profiles/start/:id', startProfileHandler);
-app.post('/api/profiles/start', startProfileHandler);
-app.post('/api/v1/profiles/start/:id', startProfileHandler);
-app.post('/api/v1/profiles/start', startProfileHandler);
-app.post('/api/v2/profiles/start/:id', startProfileHandler);
-app.post('/api/v2/profiles/start', startProfileHandler);
-app.post('/api/v3/profiles/start/:id', startProfileHandler);
-app.post('/api/v3/profiles/start', startProfileHandler);
-
-// ----------------- AUTOMATION SCRIPT MOCKS -----------------
-
+// ----------------- AUTOMATION & METRICS MOCKS -----------------
 app.get('/api/scripts', (req, res) => {
   res.json([
     { id: 's-1', name: 'Auto Warmup Cookies' },
@@ -540,28 +600,14 @@ app.get('/api/scripts', (req, res) => {
     { id: 's-3', name: 'Twitter bot auto-post' }
   ]);
 });
-
 app.post('/api/scripts/execute/:id', (req, res) => {
-  const { id } = req.params;
-  const { profileId } = req.body;
-  res.json({
-    executionId: `exec-${Date.now()}`,
-    status: 'Running'
-  });
+  res.json({ executionId: `exec-${Date.now()}`, status: 'Running' });
 });
-
 app.post('/api/scripts/check-status/:id', (req, res) => {
-  res.json({
-    status: 'Completed',
-    progress: 100
-  });
+  res.json({ status: 'Completed', progress: 100 });
 });
 
-app.post('/api/scripts/kill-execute/:id', (req, res) => {
-  res.json({ success: true });
-});
-
-// GET /api/server/status
+// System Status Info
 app.get('/api/server/status', (req, res) => {
   res.json({
     status: 'online',
@@ -578,38 +624,21 @@ app.get('/api/server/status', (req, res) => {
   });
 });
 
-// POST & GET /api/server/reset - Stops all Chromium profiles, resets memory map and sync status, then restarts the server process tree
-const handleServerReset = (req, res) => {
+// Reset Server Handler
+const handleServerReset = async (req, res) => {
   console.log('====== RESET SERVER TRIGGERED ======');
-  let killedCount = 0;
   
-  // 1. Force kill all active browser processes using Windows taskkill (equivalent to stop.bat)
-  for (const [id, browser] of activeBrowsers.entries()) {
-    console.log(`Killing Chromium process for profile ${id} (PID ${browser.pid}) via Server Reset...`);
-    try {
-      execSync(`taskkill /pid ${browser.pid} /f /t`);
-      killedCount++;
-    } catch (err) {
-      try {
-        process.kill(browser.pid, 'SIGKILL');
-        killedCount++;
-      } catch (e) {
-        console.warn(`Failed to kill PID ${browser.pid} during reset:`, e.message);
-      }
-    }
-  }
+  // Force close all browsers running
+  const killedCount = await launchEngine.stopAll();
   
-  // 2. Clear memory store
-  activeBrowsers.clear();
-  
-  // 3. Reset all profile statuses to 'stopped' in profiles.json to ensure consistency
+  // Clear file database profile status
   try {
-    const profiles = loadProfiles();
+    const profiles = profileManager.loadProfiles();
     const updated = profiles.map(p => ({ ...p, status: 'stopped' }));
-    saveProfiles(updated);
-    console.log('Successfully reset all profile statuses in profiles.json.');
+    profileManager.saveProfiles(updated);
+    console.log('Reset all profile statuses in profiles.json.');
   } catch (err) {
-    console.error('Failed to reset profile statuses in file:', err);
+    console.error('Failed to reset profile statuses during server reset:', err);
   }
   
   res.json({
@@ -618,12 +647,11 @@ const handleServerReset = (req, res) => {
     killedCount
   });
 
-  // 4. Wait 1 second to allow HTTP response transmission, then auto-restart Node process tree in a new window
+  // Auto-restart Node server process
   setTimeout(() => {
     console.log('Re-spawning server process in new window...');
     try {
-      const { spawn } = require('child_process');
-      const child = spawn('cmd.exe', ['/c', 'start', '"Gams-GALogin API Server"', 'node', 'server.cjs'], {
+      const child = require('child_process').spawn('cmd.exe', ['/c', 'start', '"Gams-GALogin API Server"', 'node', 'server.cjs'], {
         detached: true,
         stdio: 'ignore',
         shell: true,
@@ -641,13 +669,10 @@ const handleServerReset = (req, res) => {
 app.post('/api/server/reset', handleServerReset);
 app.get('/api/server/reset', handleServerReset);
 
-// POST /api/server/sync-cloud - Secure sync to remote server
 app.post('/api/server/sync-cloud', async (req, res) => {
   console.log(`Syncing profiles securely to Gia An Company Cloud: ${REMOTE_SYNC_SERVER}`);
   try {
-    // Simulate secure cloud sync with remote server using environment credentials
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    await new Promise(resolve => setTimeout(resolve, 1200));
     res.json({
       success: true,
       message: `Đồng bộ hóa đám mây thành công với ${REMOTE_SYNC_SERVER}! Dữ liệu profile và SMTP mail domain [${MAIL_DOMAIN}] đã được bảo vệ an toàn chống mã độc và rò rỉ thông tin.`,
@@ -659,19 +684,17 @@ app.post('/api/server/sync-cloud', async (req, res) => {
 });
 
 // In-memory store for verification codes
-// Key: email, Value: { code, expires }
 const verificationCodes = new Map();
 
-// POST /api/auth/forgot-password - Gửi mã xác thực khôi phục mật khẩu
+// Authentication recovery API (DNS simulation)
 app.post('/api/auth/forgot-password', async (req, res) => {
   const { email } = req.body;
   if (!email || !email.includes('@')) {
     return res.status(400).json({ error: 'Email không hợp lệ.' });
   }
 
-  // Generate 6-digit code
   const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expires = Date.now() + 10 * 60 * 1000; // 10 minutes
+  const expires = Date.now() + 10 * 60 * 1000; // 10 mins
   verificationCodes.set(email, { code, expires });
 
   console.log(`==========================================================`);
@@ -679,21 +702,18 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   console.log(` -> Mã xác thực (OTP): ${code}`);
   console.log(`==========================================================`);
 
-  // Attempt to send real email using SMTP credentials from .env
   try {
     const nodemailer = require('nodemailer');
-    
-    // Create transporter using SMTP credentials from .env
     const transporter = nodemailer.createTransport({
       host: MAIL_SMTP_HOST,
       port: parseInt(MAIL_SMTP_PORT, 10),
-      secure: MAIL_SMTP_PORT === '465', // true for 465, false for other ports
+      secure: MAIL_SMTP_PORT === '465',
       auth: {
         user: MAIL_SMTP_USER,
         pass: MAIL_SMTP_PASS
       },
       tls: {
-        rejectUnauthorized: false // avoid SSL/TLS issue on local DNS configs
+        rejectUnauthorized: false
       }
     });
 
@@ -701,35 +721,25 @@ app.post('/api/auth/forgot-password', async (req, res) => {
       from: `Gams-GALogin Security <${MAIL_SMTP_USER}>`,
       to: email,
       subject: `[Gams-GALogin] Mã xác thực khôi phục mật khẩu của bạn: ${code}`,
-      text: `Chào bạn,\n\nBạn vừa yêu cầu khôi phục mật khẩu cho tài khoản Gams-GALogin liên kết với email này.\n\nMã xác thực khôi phục mật khẩu (OTP) của bạn là: ${code}\nMã này có hiệu lực trong vòng 10 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.\n\nNếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này hoặc liên hệ hỗ trợ kỹ thuật của Gia An Company.\n\nTrân trọng,\nHệ thống quản trị Gams-GALogin`,
+      text: `Chào bạn,\n\nMã xác thực khôi phục mật khẩu (OTP) của bạn là: ${code}\nHiệu lực 10 phút.`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #1f222f; background-color: #0b0c10; color: #f8fafc; border-radius: 12px;">
           <h2 style="color: #3b82f6; border-bottom: 1px solid #1f222f; padding-bottom: 10px;">Khôi Phục Mật Khẩu Gams-GALogin</h2>
           <p>Chào bạn,</p>
-          <p>Bạn vừa yêu cầu khôi phục mật khẩu cho tài khoản Gams-GALogin liên kết với email này.</p>
           <div style="background-color: #12141c; border: 1px solid #2d3142; padding: 15px; border-radius: 8px; text-align: center; margin: 20px 0;">
             <p style="margin: 0; font-size: 14px; color: #64748b;">Mã xác thực OTP của bạn là:</p>
             <h1 style="margin: 10px 0 0 0; color: #8b5cf6; font-size: 32px; letter-spacing: 5px; font-family: monospace;">${code}</h1>
           </div>
-          <p style="font-size: 12px; color: #64748b;">Mã xác thực có hiệu lực trong vòng 10 phút. Tuyệt đối không chia sẻ mã này cho người khác để tránh bị hack tài khoản.</p>
-          <p style="border-top: 1px solid #1f222f; padding-top: 15px; font-size: 11px; color: #64748b; margin-top: 25px;">
-            Hệ thống bảo mật doanh nghiệp Gia An Co., Ltd. • Kết nối DNS an toàn.
-          </p>
         </div>
       `
     };
 
     await transporter.sendMail(mailOptions);
-    console.log(`[SMTP] Email khôi phục mật khẩu đã được gửi đến ${email} thành công!`);
     return res.json({
       success: true,
-      message: `Mã xác thực OTP đã được gửi đến email ${email} thành công! Vui lòng kiểm tra hộp thư.`
+      message: `Mã xác thực OTP đã được gửi đến email ${email} thành công!`
     });
-
   } catch (mailError) {
-    console.warn(`[SMTP Warning] Không thể gửi email thực tế qua SMTP: ${mailError.message}`);
-    console.log(`[Fallback] Hệ thống tự động chuyển sang chế độ Mô Phỏng DNS thành công. Mã OTP để thử nghiệm: ${code}`);
-    
     return res.json({
       success: true,
       message: `Đã kích hoạt chế độ khôi phục mật khẩu. Mã OTP đã được xuất ra log console của Server [${code}] (do chưa cấu hình DNS/SMTP SMTP relay đầy đủ).`
@@ -737,7 +747,6 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   }
 });
 
-// POST /api/auth/reset-password - Đặt lại mật khẩu mới
 app.post('/api/auth/reset-password', (req, res) => {
   const { email, code, newPassword } = req.body;
   if (!email || !code || !newPassword) {
@@ -767,10 +776,10 @@ app.post('/api/auth/reset-password', (req, res) => {
   });
 });
 
-// Start listening
+// Start Server
 app.listen(PORT, () => {
   console.log(`==========================================================`);
-  console.log(` Gams-GALogin Local API Server dang chay tai:`);
+  console.log(` Gams-GALogin Modular API Server dang chay tai:`);
   console.log(` -> http://localhost:${PORT}`);
   console.log(`==========================================================`);
 });

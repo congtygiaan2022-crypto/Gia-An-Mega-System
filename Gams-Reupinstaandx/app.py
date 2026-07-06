@@ -262,6 +262,58 @@ def save_profile_config(profile_name):
     db_manager.save_profile_config(profile_name, data)
     return jsonify({"success": True})
 
+@app.route('/api/dashboard/<profile_name>', methods=['GET'])
+def get_dashboard_stats(profile_name):
+    try:
+        stats = db_manager.get_profile_dashboard_stats(profile_name)
+        cfg = db_manager.get_profile_config(profile_name)
+        stats["sources"] = {
+            "instagram": cfg.get("instagram_urls", []),
+            "x": cfg.get("x_urls", []),
+            "threads": cfg.get("threads_urls", []),
+            "fanpages": cfg.get("fanpage_urls", []) if cfg.get("fanpage_urls") else ([cfg.get("fanpage_url")] if cfg.get("fanpage_url") else [])
+        }
+        return jsonify(stats)
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
+@app.route('/api/reup_post_manual/<profile_name>', methods=['POST'])
+def reup_post_manual(profile_name):
+    # Check if the profile is currently running auto task to avoid Chromium conflicts
+    state = bot_controller_instance.profiles_state.get(profile_name)
+    if state and state.get("status") == "RUNNING":
+        return jsonify({"success": False, "message": "Profile đang chạy Auto! Vui lòng ấn STOP Auto trước khi chạy Đăng thủ công."})
+        
+    data = request.json
+    platform = data.get("platform")
+    post_id = data.get("post_id")
+    bypass_ai = data.get("bypass_ai", False)
+    test_mode = data.get("test_mode", False)
+    
+    if not platform or not post_id:
+        return jsonify({"success": False, "message": "Thiếu thông tin Nền tảng hoặc ID bài viết"})
+        
+    import subprocess
+    import sys
+    try:
+        # Kích hoạt worker_process.py chạy ở chế độ manual
+        cmd = [sys.executable, "worker_process.py", profile_name, "1", "--manual", platform, post_id]
+        if bypass_ai:
+            cmd.append("--bypass-ai")
+        if test_mode:
+            cmd.append("--test-mode")
+            
+        subprocess.Popen(
+            cmd,
+            cwd=os.getcwd(),
+            creationflags=subprocess.CREATE_NEW_CONSOLE
+        )
+        msg_mode = "Đăng gốc (Không AI)" if bypass_ai else "Đăng thẳng (Có AI)"
+        msg_test = " dưới dạng TEST thử nghiệm" if test_mode else ""
+        return jsonify({"success": True, "message": f"Đã kích hoạt tiến trình {msg_mode}{msg_test} cho bài viết {post_id}. Vui lòng theo dõi log/console."})
+    except Exception as e:
+        return jsonify({"success": False, "message": str(e)})
+
 def start_file_watcher():
     import threading
     import time

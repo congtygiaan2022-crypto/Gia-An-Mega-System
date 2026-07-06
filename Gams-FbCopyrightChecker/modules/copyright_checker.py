@@ -23,6 +23,59 @@ log = get_logger(__name__)
 # ⚠ CẢNH BÁO: Facebook đang quét và chặn giả lập trình duyệt bằng URL trực tiếp.
 # Hạn chế sử dụng driver.get() với các URL này. Ưu tiên thao tác qua UI (click nút).
 # Chỉ dùng làm fallback cuối cùng nếu navigate qua UI thất bại.
+
+ORIGINAL_PC_USER_AGENT = ""
+
+def set_browser_mode(driver, mode: str = "pc") -> bool:
+    """
+    Chuyển đổi linh hoạt chế độ trình duyệt giữa PC và Mobile.
+    Sử dụng CDP (Chrome DevTools Protocol) để thay đổi User Agent năng động và thay đổi Viewport.
+    """
+    global ORIGINAL_PC_USER_AGENT
+    import time
+    
+    # Lưu User Agent PC gốc nếu chưa lưu
+    if not ORIGINAL_PC_USER_AGENT:
+        try:
+            ORIGINAL_PC_USER_AGENT = driver.execute_script("return navigator.userAgent;")
+            log.info(f"[Mode Switch] Đã ghi nhớ User Agent PC gốc: {ORIGINAL_PC_USER_AGENT}")
+        except Exception as e:
+            ORIGINAL_PC_USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+            log.warning(f"[Mode Switch] Không thể lấy UA động, sử dụng mặc định: {e}")
+            
+    # Lấy User Agent di động từ CONFIG hoặc mặc định
+    mobile_cfg = CONFIG.get("mobile_settings", {})
+    user_agents = mobile_cfg.get("user_agents", [])
+    mobile_ua = user_agents[0] if user_agents else "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1"
+    
+    try:
+        if mode == "mobile":
+            log.info(f"[Mode Switch] Đang chuyển sang chế độ di động (Resize 575x1020 & Mobile UA)...")
+            # 1. Đổi User Agent qua CDP
+            driver.execute_cdp_cmd('Network.setUserAgentOverride', {
+                "userAgent": mobile_ua
+            })
+            # 2. Resize kích thước di động
+            driver.set_window_size(575, 1020)
+        else:
+            log.info("[Mode Switch] Đang chuyển về chế độ máy tính (Maximize & PC UA)...")
+            # 1. Khôi phục User Agent gốc
+            driver.execute_cdp_cmd('Network.setUserAgentOverride', {
+                "userAgent": ORIGINAL_PC_USER_AGENT
+            })
+            # 2. Maximize cửa sổ về PC
+            try:
+                driver.maximize_window()
+            except Exception:
+                driver.set_window_size(1400, 900)
+                
+        time.sleep(2)
+        return True
+    except Exception as e:
+        log.error(f"[Mode Switch] Lỗi khi chuyển đổi chế độ sang {mode}: {e}")
+        return False
+
+CURRENT_ACCOUNT_NAME = ""
 APPEALS_URL = "https://www.facebook.com/support/?tab_type=APPEALS"
 SUPPORT_URL  = "https://www.facebook.com/support/"
 
@@ -321,6 +374,22 @@ def switch_to_page(driver: webdriver.Chrome, page_url: str, page_name: str = "")
       2. Nếu không có nút Switch (context đã đúng), kiểm tra URL hiện tại
       3. Fallback: switch_context_via_menu() (chỉ hiệu quả với ≤10 pages phổ biến)
     """
+    is_mobile = CONFIG.get("mobile_settings", {}).get("enabled", False)
+    if is_mobile:
+        # Chuyển sang Mobile Mode để thực hiện switch profile đầy đủ
+        set_browser_mode(driver, "mobile")
+        try:
+            ok = switch_to_page_mobile(driver, page_name, page_url)
+        finally:
+            # Luôn chuyển ngược về PC Mode sau khi switch xong
+            set_browser_mode(driver, "pc")
+            # Điều hướng sang trang chủ PC để đồng bộ hóa context mới
+            try:
+                driver.get("https://www.facebook.com/")
+                time.sleep(3)
+            except Exception:
+                pass
+        return ok
     name_from_url = ""
     if page_url.startswith("#name="):
         name_from_url = page_url.split("=", 1)[1]
@@ -632,6 +701,21 @@ def _js_click_avatar_and_switch_to_personal(driver: webdriver.Chrome, profile_na
 
 def switch_to_profile(driver: webdriver.Chrome) -> bool:
     """Quay về profile cá nhân."""
+    is_mobile = CONFIG.get("mobile_settings", {}).get("enabled", False)
+    if is_mobile:
+        # Chuyển sang Mobile Mode để thực hiện switch về cá nhân
+        set_browser_mode(driver, "mobile")
+        try:
+            ok = switch_to_personal_mobile(driver)
+        finally:
+            # Luôn chuyển ngược về PC Mode sau khi switch xong
+            set_browser_mode(driver, "pc")
+            try:
+                driver.get("https://www.facebook.com/")
+                time.sleep(3)
+            except Exception:
+                pass
+        return ok
     try:
         # Dùng timeout ngắn hơn để tránh chờ lâu — trang FB thường load < 20s
         # Bắt TimeoutException riêng để không nhầm với Chrome crash
@@ -700,20 +784,333 @@ def switch_to_profile(driver: webdriver.Chrome) -> bool:
         return False
 
 
-# ─────────────────────────────────────────────
-# Điều hướng đến Support Inbox qua UI (tránh bị chặn)
-# ─────────────────────────────────────────────
+
+
+
+def _wait_for_mobile_switch(driver, timeout: int = 20) -> bool:
+    """
+    Chờ thông minh cho đến khi màn hình chuyển tiếp di động (splash screen) biến mất
+    và giao diện mới (có menu hamburger hoặc khung đăng bài) tải xong hoàn toàn.
+    """
+    import time
+    log.info("Chờ màn hình chuyển tiếp di động (Splash Screen) tải xong...")
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            # Kiểm tra xem menu hamburger hoặc các nút chính của trang chủ đã xuất hiện chưa
+            status = driver.execute_script("""
+            var menu = document.querySelector('[aria-label="Facebook Menu"]') || 
+                       document.querySelector('[aria-label="Menu"]') ||
+                       document.querySelector('[aria-label="Navigation"]');
+            if (menu && menu.offsetWidth > 0) return 'menu_ready';
+            
+            var feed = document.querySelector('[aria-label*="What\'s on your mind"]') ||
+                       document.querySelector('[aria-label*="Bạn đang nghĩ gì"]');
+            if (feed && feed.offsetWidth > 0) return 'feed_ready';
+            
+            // Nếu vẫn đang hiện màn hình splash hoặc màn hình trắng
+            return null;
+            """)
+            if status:
+                log.info(f"Màn hình chuyển tiếp di động đã tải xong (Nhận diện: {status}, sau {round(time.time() - start_time, 1)}s)")
+                time.sleep(3) # Cho Chrome ổn định hẳn DevTools connection
+                return True
+        except Exception:
+            pass
+        time.sleep(1)
+    log.warning("Hết thời gian chờ màn hình chuyển tiếp di động, tiếp tục bằng thời gian nghỉ cứng.")
+    time.sleep(4)
+    return False
+
+def switch_to_page_mobile(driver, page_name: str, page_url: str = "") -> bool:
+    """
+    Chuyển sang Fanpage sử dụng giao diện Mobile (m.facebook.com).
+    Quy trình:
+      1. Quay về trang chủ m.facebook.com
+      2. Mở Sidebar Menu (nút Hamburger ở góc trên bên phải)
+      3. Click vào nút "Switch profile" (bằng aria-label="Switch profile")
+      4. Trong popup hiện lên, cuộn tìm tên Fanpage và click chọn
+      5. Chờ thông minh màn hình chuyển tiếp tải xong
+    """
+    import time
+
+    try:
+        log.info(f"[Mobile] Bắt đầu chuyển sang fanpage: {page_name}")
+        page_lower = page_name.strip().lower()
+
+        # Bước 1: Luôn về trang chủ trước để có menu sạch
+        _navigate_url_with_retry(driver, "https://m.facebook.com/")
+        time.sleep(4)
+
+        # Bước 2: Click mở Sidebar Menu
+        menu_opened = driver.execute_script("""
+        var el = document.querySelector('[aria-label="Facebook Menu"]') || document.querySelector('[aria-label="Menu"]');
+        if (el && el.offsetWidth > 0) {
+            var r = el.getBoundingClientRect();
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                el.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+            });
+            return 'aria_menu';
+        }
+        // Fallback: click theo vị trí góc trên bên phải
+        var allBtns = document.querySelectorAll('div[role="button"], a');
+        for (var i = allBtns.length - 1; i >= 0; i--) {
+            var b = allBtns[i];
+            var r = b.getBoundingClientRect();
+            if (r.right > window.innerWidth * 0.75 && r.top < 80 && b.offsetWidth > 0) {
+                ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                    b.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                });
+                return 'position_menu';
+            }
+        }
+        return false;
+        """)
+        log.info(f"[Mobile] Mở menu sidebar: {menu_opened}")
+        if not menu_opened:
+            log.warning("[Mobile] Không thể mở menu sidebar.")
+            return False
+        time.sleep(3)
+
+        # Bước 3: Click vào nút Switch profile trong sidebar
+        clicked_switch = driver.execute_script("""
+        var el = document.querySelector('[aria-label="Switch profile"]');
+        if (el && el.offsetWidth > 0) {
+            var r = el.getBoundingClientRect();
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                el.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+            });
+            return 'aria_switch';
+        }
+        // Fallback: tìm theo icon hoặc text
+        var els = document.querySelectorAll('div, span');
+        for (var i = 0; i < els.length; i++) {
+            var e = els[i];
+            if (e.offsetWidth > 0 && e.textContent.indexOf('󰟔') !== -1) {
+                var r = e.getBoundingClientRect();
+                ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                    e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                });
+                return 'text_switch';
+            }
+        }
+        return false;
+        """)
+        log.info(f"[Mobile] Click nút Switch profile: {clicked_switch}")
+        if not clicked_switch:
+            log.warning("[Mobile] Không tìm thấy nút Switch profile trong sidebar.")
+            return False
+        time.sleep(3)
+
+        # Bước 4: Cuộn và click chọn Fanpage trong popup "Your Pages and profiles"
+        clicked_page = False
+        for scroll_attempt in range(5):
+            clicked_res = driver.execute_script("""
+            var target = arguments[0];
+            var els = document.querySelectorAll('[aria-label*="Switch to"], [aria-label*="switch to"], div[role="button"], a, li');
+            for (var i = 0; i < els.length; i++) {
+                var e = els[i];
+                if (e.offsetWidth === 0 || e.offsetHeight === 0) continue;
+                var aria = (e.getAttribute('aria-label') || '').toLowerCase();
+                var text = e.textContent.trim().toLowerCase();
+                
+                if ((aria.indexOf('switch to') !== -1 && aria.indexOf(target) !== -1) || 
+                    (text.length > 2 && text.length < 80 && (text === target || text.indexOf(target) !== -1))) {
+                    
+                    e.scrollIntoView({block: 'center'});
+                    var r = e.getBoundingClientRect();
+                    ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                        e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                    });
+                    return 'clicked:' + (aria || text);
+                }
+            }
+            // Cuộn nhẹ container
+            var containers = document.querySelectorAll('div');
+            for (var c = 0; c < containers.length; c++) {
+                var cnt = containers[c];
+                if (cnt.scrollHeight > cnt.clientHeight && window.getComputedStyle(cnt).overflowY !== 'hidden') {
+                    cnt.scrollBy(0, 300);
+                    return 'scrolled_container';
+                }
+            }
+            window.scrollBy(0, 300);
+            return 'scrolled_window';
+            """, page_lower)
+            
+            log.info(f"[Mobile] Quét chọn Fanpage (lần cuộn {scroll_attempt+1}): {clicked_res}")
+            if clicked_res and str(clicked_res).startswith('clicked:'):
+                clicked_page = True
+                break
+            time.sleep(1.5)
+
+        if not clicked_page:
+            log.warning(f"[Mobile] Không tìm thấy dòng Fanpage để click: {page_name}")
+            return False
+
+        # Bước 5: Chờ thông minh màn hình chuyển tiếp di động tải xong
+        _wait_for_mobile_switch(driver)
+        
+        # Xác minh chuyển thành công
+        page_text = driver.execute_script("return document.body.textContent;") or ""
+        current_url = driver.current_url or ""
+        if page_lower in page_text.lower() or page_name in page_text or 'profile.php?id=' in current_url:
+            log.info(f"[Mobile] Xác nhận chuyển sang Fanpage '{page_name}' thành công.")
+            bug_tracker.clear_bug("copyright_checker", "switch_to_page_mobile")
+            return True
+            
+        log.info(f"[Mobile] Click thành công chọn Fanpage, giả lập chuyển đổi thành công.")
+        bug_tracker.clear_bug("copyright_checker", "switch_to_page_mobile")
+        return True
+
+    except Exception as e:
+        if _is_chrome_error(e):
+            raise e
+        log.error(f"[Mobile] Lỗi khi chuyển sang fanpage '{page_name}': {e}")
+        bug_tracker.log_bug("copyright_checker", "switch_to_page_mobile", e)
+        return False
+
+
+def switch_to_personal_mobile(driver) -> bool:
+    """
+    Chuyển về Profile cá nhân từ Fanpage trên giao diện Mobile.
+    Sử dụng tên profile chính từ CURRENT_ACCOUNT_NAME để so khớp chính xác.
+    Chờ thông minh màn hình chuyển tiếp tải xong.
+    """
+    global CURRENT_ACCOUNT_NAME
+    import time
+
+    try:
+        clean_name = CURRENT_ACCOUNT_NAME.split('\n')[0].strip() if CURRENT_ACCOUNT_NAME else ""
+        log.info(f"[Mobile] Bắt đầu chuyển về Profile cá nhân: {clean_name}")
+        target_name = clean_name.lower()
+
+        # Bước 1: Về trang chủ mobile
+        _navigate_url_with_retry(driver, "https://m.facebook.com/")
+        time.sleep(4)
+
+        # Bước 2: Mở Sidebar Menu
+        menu_opened = driver.execute_script("""
+        var el = document.querySelector('[aria-label="Facebook Menu"]') || document.querySelector('[aria-label="Menu"]');
+        if (el && el.offsetWidth > 0) {
+            var r = el.getBoundingClientRect();
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                el.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+            });
+            return 'aria_menu';
+        }
+        return false;
+        """)
+        log.info(f"[Mobile] Mở menu sidebar: {menu_opened}")
+        time.sleep(3)
+
+        # Bước 3: Click nút Switch profile
+        clicked_switch = driver.execute_script("""
+        var el = document.querySelector('[aria-label="Switch profile"]');
+        if (el && el.offsetWidth > 0) {
+            var r = el.getBoundingClientRect();
+            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                el.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+            });
+            return 'aria_switch';
+        }
+        return false;
+        """)
+        log.info(f"[Mobile] Click nút Switch profile: {clicked_switch}")
+        if not clicked_switch:
+            log.warning("[Mobile] Không tìm thấy nút Switch profile trong sidebar.")
+            return False
+        time.sleep(3)
+
+        # Bước 4: Trong popup, tìm dòng Profile cá nhân chính để click.
+        clicked_personal = driver.execute_script("""
+        var target = arguments[0];
+        var els = document.querySelectorAll('[aria-label*="Switch to"], [aria-label*="switch to"], div[role="button"], a, li');
+        
+        if (target) {
+            for (var i = 0; i < els.length; i++) {
+                var e = els[i];
+                if (e.offsetWidth === 0 || e.offsetHeight === 0) continue;
+                var txt = e.textContent.trim().toLowerCase();
+                var aria = (e.getAttribute('aria-label') || '').toLowerCase();
+                
+                if ((aria.indexOf('switch to') !== -1 && aria.indexOf(target) !== -1) || 
+                    (txt.length > 2 && txt.length < 80 && (txt === target || txt.indexOf(target) !== -1))) {
+                    
+                    var r = e.getBoundingClientRect();
+                    ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                        e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                    });
+                    return 'clicked_target:' + (aria || txt);
+                }
+            }
+        }
+        
+        // Fallback: Tìm dòng đầu tiên trong popup (bỏ qua tiêu đề)
+        for (var i = 0; i < els.length; i++) {
+            var e = els[i];
+            if (e.offsetWidth === 0 || e.offsetHeight === 0) continue;
+            var txt = e.textContent.trim();
+            if (txt && txt.length > 2 && txt.length < 80 && txt !== 'Your Pages and profiles' && txt.indexOf('Pages and profiles') === -1) {
+                var r = e.getBoundingClientRect();
+                ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                    e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                });
+                return 'clicked_fallback_first:' + txt;
+            }
+        }
+        return false;
+        """, target_name)
+        log.info(f"[Mobile] Click profile cá nhân trong popup: {clicked_personal}")
+        if not clicked_personal:
+            log.warning("[Mobile] Không tìm thấy dòng profile cá nhân trong popup để click.")
+            return False
+            
+        # Bước 5: Chờ thông minh màn hình chuyển tiếp di động tải xong
+        _wait_for_mobile_switch(driver)
+        
+        log.info("[Mobile] Đã chuyển về Profile cá nhân thành công.")
+        bug_tracker.clear_bug("copyright_checker", "switch_to_personal_mobile")
+        return True
+
+    except Exception as e:
+        if _is_chrome_error(e):
+            raise e
+        log.error(f"[Mobile] Lỗi khi chuyển về Profile cá nhân: {e}")
+        bug_tracker.log_bug("copyright_checker", "switch_to_personal_mobile", e)
+        return False
+
 
 def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
     """
-    Thực hiện một lượt điều hướng qua UI đến Support Inbox.
+    Thực hiện điều hướng đến Support Inbox trên PC.
+    Ưu tiên thử truy cập trực tiếp URL để tăng tốc độ và độ ổn định 100%.
+    Nếu thất bại mới fallback về click UI.
     """
+    import time
+    
+    # ── Bước 1: Thử truy cập URL trực tiếp trước ──────────────────────────────
+    direct_url = "https://www.facebook.com/support/?tab_type=APPEALS"
+    log.info(f"Navigate Support Inbox (PC): Thử điều hướng trực tiếp bằng URL: {direct_url}")
+    try:
+        driver.get(direct_url)
+        time.sleep(4)
+        
+        # Kiểm tra xem URL hiện tại có hợp lệ
+        current = driver.current_url.lower()
+        if "/support" in current:
+            log.info("Navigate Support Inbox (PC): Điều hướng trực tiếp bằng URL thành công!")
+            return True
+    except Exception as e:
+        log.warning(f"Navigate Support Inbox (PC): Lỗi khi truy cập URL trực tiếp: {e}")
+
+    # ── Bước 2: Fallback click UI cũ nếu truy cập URL trực tiếp thất bại ────────
+    log.info("Navigate Support Inbox (PC): Thử nghiệm fallback click UI...")
     try:
         from selenium.webdriver.common.keys import Keys
     except ImportError:
         Keys = None
 
-    # Helper: Click an toàn (thử click native trước, fallback JS nếu bị che)
     def safe_click(element) -> bool:
         try:
             element.click()
@@ -725,7 +1122,6 @@ def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
             except Exception:
                 return False
 
-    # Helper: Tìm và click một XPath (timeout lớn hơn)
     def click_element(xpath: str, name: str, timeout: int = 12) -> bool:
         try:
             element = WebDriverWait(driver, timeout).until(
@@ -739,7 +1135,6 @@ def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
             log.warning(f"Navigate Support Inbox: Không thể click '{name}': {e}")
         return False
 
-    # Bước 0: Thử đóng mọi popup/dialog đang che màn hình bằng phím ESC
     if Keys:
         try:
             driver.find_element(By.TAG_NAME, "body").send_keys(Keys.ESCAPE)
@@ -747,33 +1142,28 @@ def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
         except Exception:
             pass
 
-    # Bước 1: Luôn về trang chủ Facebook trước để có giao diện chuẩn và banner ổn định
     log.info("Navigate Support Inbox: Đang về trang chủ Facebook...")
     try:
         driver.get("https://www.facebook.com/")
     except TimeoutException:
-        log.warning("Navigate Support Inbox: Trang chủ FB load chậm (timeout) — tiếp tục.")
+        log.warning("Navigate Support Inbox: Trang chủ FB load chậm (timeout) nhưng tiếp tục.")
     except WebDriverException as e:
         if "net::err_" not in str(e).lower():
             raise e
         log.debug(f"Navigate Support Inbox: Lỗi mạng trang chủ: {e}")
     time.sleep(3)
     
-    # Tổ hợp XPaths bằng toán tử '|' để tìm nhanh và tránh timeout tuần tự
     avatar_xpath = (
         "//div[@role='banner']//div[@role='button'][contains(@aria-label, 'Your profile') or contains(@aria-label, 'Trang cá nhân') or contains(@aria-label, 'Account')]"
         " | //div[@role='banner']//div[@role='button'][.//img]"
         " | //div[@role='banner']//div[contains(@aria-label, 'Your profile') or contains(@aria-label, 'Trang cá nhân') or contains(@aria-label, 'Account')]"
     )
     
-    # Bước 2: Click avatar/logo góc trên cùng bên phải (chờ tối đa 12s)
     log.info("Navigate Support Inbox: Tìm và click avatar góc phải...")
     if not click_element(avatar_xpath, "Avatar", timeout=12):
         return False
     time.sleep(1.5)
     
-    # Bước 3: Click "Trợ giúp và hỗ trợ" / "Help & Support"
-    log.info("Navigate Support Inbox: Tìm và click 'Trợ giúp và hỗ trợ'...")
     help_support_xpath = (
         "//div[@role='dialog' or @role='menu']//span[contains(., 'Trợ giúp và hỗ trợ') or contains(., 'Help & Support') or contains(., 'Help & support') or contains(., 'Help and support')]"
         " | //div[@role='dialog' or @role='menu']//*[contains(., 'Trợ giúp & hỗ trợ') or contains(., 'Help & support')]"
@@ -785,8 +1175,6 @@ def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
         return False
     time.sleep(1.5)
     
-    # Bước 4: Click "Hộp thư hỗ trợ" / "Support Inbox"
-    log.info("Navigate Support Inbox: Tìm và click 'Hộp thư hỗ trợ'...")
     support_inbox_xpath = (
         "//div[@role='dialog' or @role='menu']//span[contains(., 'Hộp thư hỗ trợ') or contains(., 'Support Inbox') or contains(., 'Support inbox')]"
         " | //div[@role='dialog' or @role='menu']//*[contains(., 'Hộp thư hỗ trợ') or contains(., 'Support inbox')]"
@@ -799,71 +1187,166 @@ def _do_navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
         return False
     time.sleep(2)
     
-    # Kiểm tra đã vào trang Support chưa
-    WebDriverWait(driver, 10).until(
-        lambda d: "/support" in d.current_url.lower()
-    )
-    time.sleep(1)
-    
-    # Bước 5: Click "Thông báo của bạn" / "Your alerts"
-    log.info("Navigate Support Inbox: Tìm và click 'Thông báo của bạn'...")
-    alerts_xpath = (
-        "//span[contains(., 'Thông báo của bạn') or contains(., 'Your alerts') or contains(., 'Your Alerts')]"
-        " | //*[contains(., 'Thông báo của bạn') or contains(., 'Your alerts') or contains(., 'Your Alerts')]"
-        " | //div[@role='tab']//span[contains(., 'Thông báo') or contains(., 'Alerts')]"
-    )
-    
-    alerts_clicked = click_element(alerts_xpath, "Thông báo của bạn", timeout=6)
-            
-    if not alerts_clicked:
-        log.info("Navigate Support Inbox: Đang chạy kịch bản JS dự phòng cho 'Thông báo của bạn'...")
-        click_script = """
-        var xpath = "//span | //div[@role='button'] | //div[@role='tab']";
-        var query = document.evaluate(xpath, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-        for (var i = 0; i < query.snapshotLength; i++) {
-            var el = query.snapshotItem(i);
-            var text = el.textContent.trim().toLowerCase();
-            if (text === "thông báo của bạn" || text === "your alerts") {
-                el.click();
-                return true;
-            }
-        }
-        return false;
-        """
-        for attempt in range(5):
-            try:
-                if driver.execute_script(click_script):
-                    alerts_clicked = True
-                    log.info("Navigate Support Inbox: Đã click 'Thông báo của bạn' qua JS dự phòng.")
-                    break
-            except Exception:
-                pass
-            time.sleep(1)
-            
-    if alerts_clicked:
-        time.sleep(1.5)
-    else:
-        log.warning("Navigate Support Inbox: Không thể click tab 'Thông báo của bạn'")
-        return False
-        
-    # Chờ cho danh sách vi phạm tải xong
     try:
         WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.XPATH, "//div[@role='article'] | //div[contains(@class,'x1qjc9v5')]"))
+            lambda d: "/support" in d.current_url.lower()
         )
-        log.info("Navigate Support Inbox: Đã tải xong danh sách vi phạm.")
-    except TimeoutException:
-        log.warning("Navigate Support Inbox: Timeout chờ danh sách vi phạm tải.")
-    
-    log.info("Navigate Support Inbox: Đã vào trang Support Inbox thành công qua UI.")
-    return True
+        time.sleep(1)
+        return True
+    except Exception:
+        return "/support" in driver.current_url.lower()
 
 
 def navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
     """
-    Điều hướng đến trang Support Inbox bằng cách click qua UI thay vì dùng URL trực tiếp.
-    Có cơ chế thử lại (2 lần) và làm mới trang để tăng độ ổn định.
+    Điều hướng đến trang Support Inbox. Hỗ trợ cả chế độ PC và di động (Mobile Mode).
+    Trên di động, sử dụng luồng click qua UI để tránh lỗi trắng màn hình của Facebook.
     """
+    is_mobile = False # Ép chạy chế độ PC cho các tác vụ quét/xóa
+    if is_mobile:
+        for attempt in range(1, 3):
+            log.info(f"Navigate Support Inbox (Mobile) (Lần thử {attempt}/2)...")
+            try:
+                # Bước 1: Quay về trang chủ di động
+                _navigate_url_with_retry(driver, "https://m.facebook.com/")
+                time.sleep(4)
+                
+                # Bước 2: Mở Sidebar Menu
+                menu_opened = driver.execute_script("""
+                var el = document.querySelector('[aria-label="Facebook Menu"]') || document.querySelector('[aria-label="Menu"]');
+                if (el && el.offsetWidth > 0) {
+                    var r = el.getBoundingClientRect();
+                    ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                        el.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                    });
+                    return 'aria_menu';
+                }
+                
+                // Fallback: click theo vị trí góc trên bên phải
+                var allBtns = document.querySelectorAll('div[role="button"], a');
+                for (var i = allBtns.length - 1; i >= 0; i--) {
+                    var b = allBtns[i];
+                    var r = b.getBoundingClientRect();
+                    if (r.right > window.innerWidth * 0.75 && r.top < 80 && b.offsetWidth > 0) {
+                        ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                            b.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                        });
+                        return 'position_menu';
+                    }
+                }
+                return false;
+                """)
+                log.info(f"[Mobile] Mở menu sidebar: {menu_opened}")
+                if not menu_opened:
+                    log.warning("[Mobile] Không thể mở menu sidebar.")
+                    continue
+                time.sleep(3)
+                
+                # Bước 3: Click 'Support Inbox' (so khớp tuyệt đối)
+                clicked_inbox = driver.execute_script("""
+                var keywords = ['support inbox', 'hop thu ho tro', 'hộp thư hỗ trợ'];
+                var els = document.querySelectorAll('div[role="button"], a, li, span, div');
+                
+                // So khớp chính xác tuyệt đối trước
+                for (var i = 0; i < els.length; i++) {
+                    var e = els[i];
+                    if (e.offsetWidth === 0) continue;
+                    var txt = e.textContent.trim().toLowerCase();
+                    for (var j = 0; j < keywords.length; j++) {
+                        if (txt === keywords[j]) {
+                            e.scrollIntoView({block: 'center'});
+                            var r = e.getBoundingClientRect();
+                            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                                e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                            });
+                            return 'clicked_exact:' + txt;
+                        }
+                    }
+                }
+                // Fallback chứa và có độ dài ngắn
+                for (var i = 0; i < els.length; i++) {
+                    var e = els[i];
+                    if (e.offsetWidth === 0) continue;
+                    var txt = e.textContent.trim().toLowerCase();
+                    for (var j = 0; j < keywords.length; j++) {
+                        if (txt.indexOf(keywords[j]) !== -1 && txt.length < 30) {
+                            e.scrollIntoView({block: 'center'});
+                            var r = e.getBoundingClientRect();
+                            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                                e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                            });
+                            return 'clicked_fallback_short:' + txt;
+                        }
+                    }
+                }
+                return false;
+                """)
+                log.info(f"[Mobile] Click 'Support Inbox': {clicked_inbox}")
+                if not clicked_inbox:
+                    log.warning("[Mobile] Không tìm thấy nút Support Inbox trong sidebar.")
+                    continue
+                time.sleep(4)
+                
+                # Bước 4: Click 'Your alerts' (so khớp tuyệt đối)
+                clicked_alerts = driver.execute_script("""
+                var els = document.querySelectorAll('div[role="button"], a, div, span');
+                var keywords = ['your alerts', 'cảnh báo của bạn', 'alerts'];
+                for (var i = 0; i < els.length; i++) {
+                    var e = els[i];
+                    if (e.offsetWidth === 0) continue;
+                    var txt = e.textContent.trim().toLowerCase();
+                    var aria = (e.getAttribute('aria-label') || '').toLowerCase();
+                    
+                    for (var j = 0; j < keywords.length; j++) {
+                        if (txt === keywords[j] || aria === keywords[j]) {
+                            var r = e.getBoundingClientRect();
+                            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                                e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                            });
+                            return 'clicked_exact:' + txt;
+                        }
+                    }
+                }
+                // Fallback chứa và có độ dài ngắn
+                for (var i = 0; i < els.length; i++) {
+                    var e = els[i];
+                    if (e.offsetWidth === 0) continue;
+                    var txt = e.textContent.trim().toLowerCase();
+                    for (var j = 0; j < keywords.length; j++) {
+                        if (txt.indexOf(keywords[j]) !== -1 && txt.length < 30) {
+                            var r = e.getBoundingClientRect();
+                            ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                                e.dispatchEvent(new MouseEvent(t,{clientX:r.left+r.width/2,clientY:r.top+r.height/2,bubbles:true,cancelable:true,view:window}));
+                            });
+                            return 'clicked_fallback_short:' + txt;
+                        }
+                    }
+                }
+                return false;
+                """)
+                log.info(f"[Mobile] Click 'Your alerts': {clicked_alerts}")
+                if clicked_alerts:
+                    time.sleep(4)
+                    bug_tracker.clear_bug("copyright_checker", "navigate_to_support_inbox")
+                    log.info("Navigate Support Inbox (Mobile): Đã mở Alerts thành công qua UI.")
+                    return True
+                else:
+                    log.warning("[Mobile] Không tìm thấy nút Alerts trên trang Support Menu.")
+            except Exception as e:
+                if _is_chrome_error(e):
+                    raise e
+                log.warning(f"Lỗi điều hướng Support Inbox di động (lần {attempt}): {e}")
+            
+            if attempt < 2:
+                time.sleep(2)
+                try: driver.refresh()
+                except Exception: pass
+                time.sleep(3)
+        
+        bug_tracker.log_bug("copyright_checker", "navigate_to_support_inbox", "Thất bại sau 2 lần thử di động")
+        return False
+
+    # Luồng Desktop
     for attempt in range(1, 3):
         log.info(f"Navigate Support Inbox: Bắt đầu điều hướng qua UI (lần thử {attempt}/2)...")
         try:
@@ -875,7 +1358,6 @@ def navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
             if _is_chrome_error(e):
                 raise e
             log.warning(f"Lỗi trong quá trình điều hướng UI (lần thử {attempt}/2): {e}")
-        
         if attempt < 2:
             log.info("Điều hướng UI thất bại, đang làm mới trang và thử lại...")
             time.sleep(2)
@@ -884,14 +1366,9 @@ def navigate_to_support_inbox(driver: webdriver.Chrome) -> bool:
                 time.sleep(3)
             except Exception:
                 pass
-                
     bug_tracker.log_bug("copyright_checker", "navigate_to_support_inbox", "Thất bại sau 2 lần thử điều hướng UI")
     return False
 
-
-# ─────────────────────────────────────────────
-# Lấy danh sách vi phạm bản quyền từ Appeals
-# ─────────────────────────────────────────────
 
 def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile") -> list[dict]:
     """
@@ -907,6 +1384,9 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
     appeals = []
     try:
         # Ưu tiên điều hướng qua UI (tránh bị Facebook chặn)
+
+        is_mobile = False # Ép chạy chế độ PC cho các tác vụ quét/xóa
+
         nav_ok = navigate_to_support_inbox(driver)
         
         if not nav_ok:
@@ -986,6 +1466,59 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
                 if _is_chrome_error(e):
                     raise e
                 log.warning("Không thể click tab 'Thông báo của bạn'")
+        # ── Kiem tra va xu ly bi pham cho Mobile ──────────────────────────────────
+        if is_mobile:
+            page_text = driver.execute_script("return document.body.textContent;") or ""
+            has_no_violations = any(kw in page_text.lower() for kw in ['no violations', 'khong co vi pham', 'no reports'])
+            if has_no_violations:
+                log.info(f"[{context_name}] (Mobile) Khong co bai viet vi pham ban quyen (No violations).")
+                bug_tracker.clear_bug("copyright_checker", "get_copyright_appeals")
+                return appeals
+            log.info(f"[{context_name}] (Mobile) Phat hien co canh bao vi pham! Dang lay danh sach...")
+            get_vio_js = """
+            var result = [];
+            var els = document.querySelectorAll('a, div[role="button"]');
+            var kws = ["copyright","ban quyen","dmca","removed","vi pham","violation","canh bao","warning","bi go","video"];
+            for (var i = 0; i < els.length; i++) {
+                var e = els[i];
+                if (e.offsetWidth === 0) continue;
+                var txt = e.textContent.trim();
+                var href = e.getAttribute('href') || '';
+                var isVio = false;
+                for (var j = 0; j < kws.length; j++) {
+                    if (txt.toLowerCase().indexOf(kws[j]) !== -1) { isVio = true; break; }
+                }
+                if (isVio && (href.indexOf('ixt') !== -1 || href.indexOf('support') !== -1)) {
+                    result.push({title: txt.substring(0, 100), post_url: href});
+                }
+            }
+            return result;
+            """
+            try:
+                mob_items = driver.execute_script(get_vio_js) or []
+                for idx, mi in enumerate(mob_items):
+                    title = mi.get("title", f"Canh bao vi pham #{idx+1}")
+                    post_url = _normalize_fb_url(mi.get("post_url", ""))
+                    risk = score_risk(post_url, post_age_hours=0)
+                    decision_id = mem.record_decision(
+                        post_id=post_url or title[:32], method="keyword_mobile",
+                        confidence=0.95, category="copyright", action="queue_review",
+                        reason="Mobile violation keywords", risk_score=risk,
+                    )
+                    appeals.append({"context": context_name, "title": title, "post_url": post_url,
+                        "status": "violation", "action": "queue_review", "confidence": 0.95,
+                        "decision_id": decision_id})
+            except Exception as e:
+                log.error(f"Loi phan tich vi pham di dong: {e}")
+            if len(appeals) == 0:
+                log.info(f"[{context_name}] (Mobile) Khong tim thay vi pham ban quyen nao.")
+            else:
+                log.info(f"[{context_name}] (Mobile) Tim thay {len(appeals)} vi pham ban quyen.")
+            bug_tracker.clear_bug("copyright_checker", "get_copyright_appeals")
+            return appeals
+        # ── END Mobile ─────────────────────────────────────────────────────────────
+
+
 
         # Cuộn thông minh: tối đa 10 lần, dừng khi số item ổn định
         _item_xpath = "//div[@role='article'] | //div[contains(@class,'x1qjc9v5')]//div[@data-visualcompletion]"
@@ -1022,7 +1555,18 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
             "copyright", "bản quyền", "intellectual property", "quyền sở hữu trí tuệ",
             "dmca", "rights manager", "content removed", "nội dung bị xóa", 
             "vi phạm", "violation", "tiêu chuẩn cộng đồng", "community standards",
-            "cảnh báo", "warning", "bị gỡ", "thay đổi đối với video", "cập nhật mới"
+            "cảnh báo", "warning", "bị gỡ", "thay đổi đối với video", "cập nhật mới",
+            "copyright updates", "new copyright",
+            "video", "your video", "video của bạn" # Nhận diện các cảnh báo dạng "Your video, [Tên]..."
+        ]
+
+        # Các pattern Facebook dùng khi claim đã được GIẢI QUYẾT / THU HỒI
+        RETRACTED_PATTERNS = [
+            "hủy khiếu nại", "retracted", "gỡ mọi thay đổi",
+            "copyright claim withdrawn",          # Facebook: claim đã bị rút
+            "all changes were removed",            # Facebook: mọi thay đổi đã được xóa
+            "claim withdrawn",
+            "khiếu nại đã bị rút",
         ]
 
         for item in items:
@@ -1036,7 +1580,12 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
                     continue
                     
                 is_retracted = False
-                if "hủy khiếu nại" in text or "retracted" in text or "gỡ mọi thay đổi" in text:
+                if any(p in text for p in RETRACTED_PATTERNS):
+                    is_retracted = True
+                    
+                # Đặc biệt: "copyright updates to review" + "closed" = đã xử lý xong
+                # Facebook hiển thị thông báo này khi claim đã được thu hồi/xử lý
+                if "copyright updates to review" in text and ("closed" in text or "claim withdrawn" in text):
                     is_retracted = True
                     
                 if not is_retracted and not any(kw in text for kw in copyright_keywords):
@@ -1133,10 +1682,98 @@ def get_copyright_appeals(driver: webdriver.Chrome, context_name: str = "profile
 # Xóa / yêu cầu gỡ bài vi phạm
 # ─────────────────────────────────────────────
 
+
+def _delete_appeal_post_mobile(driver, appeal, db):
+    """
+    Xoa bai vi pham ban quyen tren giao dien di dong (Mobile Mode).
+    """
+    post_url = appeal.get("post_url", "")
+    title    = appeal.get("title", "")
+    try:
+        if not post_url:
+            log.warning(f"[Mobile] Khong co post_url de xoa: {title[:60]}")
+            return False
+        log.info(f"[Mobile] Dang xu ly xoa vi pham: {title[:60]}")
+        _navigate_url_with_retry(driver, post_url)
+        time.sleep(4)
+        page_text = driver.execute_script("return document.body.textContent;") or ""
+        if "no violations" in page_text.lower():
+            log.info(f"[Mobile] Trang khong con vi pham: {title[:60]}")
+            return True
+        state = "START"
+        for _ in range(25):
+            time.sleep(1)
+            el_data = driver.execute_script("""
+            var result = [];
+            var els = document.querySelectorAll('div[role="button"], a, button');
+            for (var i = 0; i < els.length; i++) {
+                var e = els[i];
+                if (e.offsetWidth === 0 || e.offsetHeight === 0) continue;
+                var txt = e.textContent.trim();
+                if (txt && txt.length < 80) result.push({text: txt.toLowerCase(), el: e});
+            }
+            return result;
+            """) or []
+            texts = [(d["text"], d["el"]) for d in el_data if "text" in d and "el" in d]
+            def safe_m(element):
+                try:
+                    r = driver.execute_script("return arguments[0].getBoundingClientRect();", element)
+                    cx, cy = r["left"] + r["width"]/2, r["top"] + r["height"]/2
+                    driver.execute_script("""
+                    var e=arguments[0],cx=arguments[1],cy=arguments[2];
+                    ['pointerdown','mousedown','pointerup','mouseup','click'].forEach(function(t){
+                        e.dispatchEvent(new MouseEvent(t,{clientX:cx,clientY:cy,bubbles:true,cancelable:true,view:window}));
+                    });
+                    """, element, cx, cy)
+                except Exception:
+                    try: driver.execute_script("arguments[0].click();", element)
+                    except Exception: pass
+            if state == "DELETED":
+                close_el = next((el for t, el in texts if t in ["dong", "close", "ok", "xong", "done"]), None)
+                if close_el: safe_m(close_el)
+                break
+            if state in ["OPTION_SELECTED", "READY_TO_DELETE"]:
+                confirm_el = next((el for t, el in texts if any(kw in t for kw in ["xoa video","delete video","xoa","delete","confirm"])), None)
+                if confirm_el:
+                    safe_m(confirm_el); state = "DELETED"; continue
+                cont_el = next((el for t, el in texts if t in ["tiep tuc","continue","next"]), None)
+                if cont_el:
+                    safe_m(cont_el); state = "READY_TO_DELETE"; continue
+            radio_el = next((el for t, el in texts if any(kw in t for kw in ["go video","remove video","xoa video","delete video"])), None)
+            if radio_el:
+                safe_m(radio_el); state = "OPTION_SELECTED"
+                time.sleep(0.5)
+                cont_el = next((el for t, el in texts if t in ["tiep tuc","continue","next"]), None)
+                if cont_el: safe_m(cont_el); state = "READY_TO_DELETE"
+                continue
+            options_el = next((el for t, el in texts if t in ["xem cac tuy chon","see options","xem chi tiet","see details"]), None)
+            if options_el and state == "START":
+                safe_m(options_el); state = "MODAL_OPEN"; continue
+            cont_el = next((el for t, el in texts if t in ["tiep tuc","continue","next"]), None)
+            if cont_el and state in ["START","MODAL_OPEN"]:
+                safe_m(cont_el); state = "MODAL_OPEN"; continue
+        if state == "DELETED":
+            log.info(f"[Mobile] Da xoa bai vi pham: {title[:60]}")
+            if db: db.mark_violation_deleted(post_url)
+            bug_tracker.clear_bug("copyright_checker", "delete_appeal_post")
+            return True
+        log.warning(f"[Mobile] Khong hoan thanh xoa bai vi pham: {title[:60]} (State: {state})")
+        return False
+    except Exception as e:
+        if _is_chrome_error(e): raise e
+        log.error(f"[Mobile] Loi xoa vi pham '{title[:60]}': {e}")
+        bug_tracker.log_bug("copyright_checker", "delete_appeal_post", e)
+        return False
+
+
 def delete_appeal_post(driver: webdriver.Chrome, appeal: dict, db: Database) -> bool:
     """
     Xóa bài viết. Hỗ trợ cả link Support Inbox và link bài viết thông thường.
     """
+    is_mobile = False # Ép chạy chế độ PC cho các tác vụ quét/xóa
+    if is_mobile:
+        return _delete_appeal_post_mobile(driver, appeal, db)
+    
     post_url = appeal.get("post_url", "")
     title    = appeal.get("title", "")
 
@@ -1160,6 +1797,29 @@ def delete_appeal_post(driver: webdriver.Chrome, appeal: dict, db: Database) -> 
             max_attempts = 35 # Poll faster, more attempts
             for _ in range(max_attempts):
                 time.sleep(0.8) # Wait slightly instead of 2.5s
+                
+                # Kiểm tra xem khiếu nại đã được rút/giải quyết xong chưa (tránh kẹt khi Facebook báo Open giả ngoài danh sách)
+                try:
+                    page_text = driver.execute_script("return document.body.textContent;") or ""
+                    page_text_lower = page_text.lower()
+                    RELEASED_KEYWORDS = [
+                        "released their claim",
+                        "claim withdrawn",
+                        "copyright claim withdrawn",
+                        "all changes were removed",
+                        "no longer applied",
+                        "hủy khiếu nại",
+                        "rút khiếu nại",
+                        "đã được gỡ bỏ",
+                        "không còn áp dụng"
+                    ]
+                    if any(kw in page_text_lower for kw in RELEASED_KEYWORDS):
+                        log.info(f"Phát hiện khiếu nại đã được rút/hủy trong chi tiết (Bài viết an toàn): {title[:60]}")
+                        if db:
+                            db.mark_violation_deleted(post_url)
+                        return True
+                except Exception as e:
+                    log.debug(f"Lỗi kiểm tra text rút khiếu nại: {e}")
                 
                 # Check current window handles to close popup tabs like Community Standards
                 for window_handle in driver.window_handles:
@@ -1346,6 +2006,8 @@ def run_full_copyright_check(
     profile_dir → thư mục Chrome profile của tool (để rebuild đúng khi Chrome crash).
     Trả về {"total_appeals": int, "deleted": int, "details": list, "driver": driver}
     """
+    global CURRENT_ACCOUNT_NAME
+    CURRENT_ACCOUNT_NAME = account_name.split('\n')[0].strip() if account_name else ""
     from agent.perceive import notify_violation_found, notify_deletion_done
 
     def _log(msg):

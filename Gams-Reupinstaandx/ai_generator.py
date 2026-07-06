@@ -174,41 +174,91 @@ class AIGenerator:
                             url = self.ai_studio_url
                         else:
                             url = "https://chatgpt.com/images" if "chatgpt.com/images" in self.ai_studio_url else "https://chatgpt.com/"
-                        print(f"[{profile_name}] Đang truy cập ChatGPT ({url})...")
-                        try:
-                            page.goto(url, wait_until="commit", timeout=60000)
-                        except Exception as e:
-                            print(f"[{profile_name}] Warning: page.goto commit for ChatGPT timed out/failed: {e}")
                         
-                        try:
-                            page.wait_for_selector('#prompt-textarea', timeout=30000)
-                        except Exception as e:
-                            print(f"[{profile_name}] Warning: ChatGPT prompt textarea not found: {e}")
-                        time.sleep(5)
-                        
-                        # --- Kiểm tra trạng thái đăng nhập ChatGPT ---
-                        is_logged_in = True
-                        login_selectors = [
-                            'button[data-testid="login-button"]',
-                            'a[href*="auth/login"]',
-                            'button:has-text("Log in")',
-                            'button:has-text("Sign up")',
-                            'button:has-text("Đăng nhập")',
-                            'button:has-text("Đăng ký")',
-                            'a:has-text("Log in")',
-                            'a:has-text("Sign up")',
-                            'a:has-text("Đăng nhập")',
-                            'a:has-text("Đăng ký")'
-                        ]
-                        for sel in login_selectors:
+                        # Thử tải trang và kiểm tra lỗi, tối đa 3 lần
+                        load_success = False
+                        for load_attempt in range(3):
+                            print(f"[{profile_name}] Đang truy cập ChatGPT ({url}) - Lần {load_attempt+1}/3...")
                             try:
-                                loc = page.locator(sel).first
-                                if loc.count() > 0 and loc.is_visible():
-                                    is_logged_in = False
-                                    break
+                                page.goto(url, wait_until="commit", timeout=60000)
+                                page.wait_for_timeout(5000)
+                            except Exception as e:
+                                print(f"[{profile_name}] Warning: page.goto commit for ChatGPT timed out/failed: {e}")
+                            
+                            # Kiểm tra nếu trang chứa thông báo lỗi / quá tải / hết session
+                            has_error = False
+                            for err_selector in [
+                                'text="Something went wrong"',
+                                'text="Oops, something went wrong"',
+                                'text="We\'re experiencing exceptionally high demand"',
+                                'text="Too many requests"',
+                                'text="Please reload"',
+                                'button:has-text("Reload")',
+                                'button:has-text("Tải lại")',
+                                'text="Check your connection"',
+                                'text="Internal Server Error"'
+                            ]:
+                                try:
+                                    if page.locator(err_selector).first.count() > 0:
+                                        has_error = True
+                                        print(f"[{profile_name}] Phát hiện lỗi ChatGPT hiển thị: '{err_selector}'")
+                                        break
+                                except:
+                                    pass
+                                    
+                            # Kiểm tra sự tồn tại của textarea
+                            has_textarea = False
+                            try:
+                                if page.locator('#prompt-textarea').first.count() > 0:
+                                    has_textarea = True
                             except:
                                 pass
                                 
+                            if has_textarea and not has_error:
+                                load_success = True
+                                break
+                            else:
+                                print(f"[{profile_name}] ChatGPT lỗi hoặc không tìm thấy ô nhập prompt. Tiến hành reload trang và chờ...")
+                                page.wait_for_timeout(5000)
+                                try:
+                                    reload_btn = page.locator('button:has-text("Reload"), button:has-text("Tải lại")').first
+                                    if reload_btn.count() > 0 and reload_btn.is_visible():
+                                        reload_btn.click()
+                                        page.wait_for_timeout(5000)
+                                except:
+                                    pass
+                                
+                        if not load_success:
+                            print(f"[{profile_name}] ⚠️ Đã thử tải trang ChatGPT 3 lần nhưng vẫn lỗi.")
+                            
+                        # --- Kiểm tra trạng thái đăng nhập ChatGPT ---
+                        is_logged_in = True
+                        
+                        # Nếu tìm thấy #prompt-textarea thì chắc chắn đã đăng nhập
+                        if page.locator('#prompt-textarea').first.count() > 0:
+                            is_logged_in = True
+                        else:
+                            login_selectors = [
+                                'button[data-testid="login-button"]',
+                                'a[href*="auth/login"]',
+                                'button:has-text("Log in")',
+                                'button:has-text("Sign up")',
+                                'button:has-text("Đăng nhập")',
+                                'button:has-text("Đăng ký")',
+                                'a:has-text("Log in")',
+                                'a:has-text("Sign up")',
+                                'a:has-text("Đăng nhập")',
+                                'a:has-text("Đăng ký")'
+                            ]
+                            for sel in login_selectors:
+                                try:
+                                    loc = page.locator(sel).first
+                                    if loc.count() > 0 and loc.is_visible():
+                                        is_logged_in = False
+                                        break
+                                except:
+                                    pass
+                                    
                         if not is_logged_in:
                             print(f"[{profile_name}] ⚠️ Phát hiện ChatGPT chưa đăng nhập!")
                             raise Exception("CHATGPT_NOT_LOGGED_IN: ChatGPT chưa được đăng nhập. Yêu cầu tạo tài khoản mới.")

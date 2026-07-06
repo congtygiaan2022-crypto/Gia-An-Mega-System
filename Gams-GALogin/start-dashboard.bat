@@ -8,7 +8,13 @@ echo ==========================================================
 echo               Gams-GALogin Dashboard Launcher
 echo ==========================================================
 echo.
-echo [1/4] Dang khoi dong Local REST API Server (Cong 1010)...
+
+:: Clean up old instances using ports 1020 and 5173
+echo [System] Kiem tra va giai phong cong ket noi cu 1020 va 5173...
+powershell -Command "Get-NetTCPConnection -LocalPort 1020,5173 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }"
+
+echo.
+echo [1/4] Dang khoi dong Local REST API Server (Cong 1020)...
 start "Gams-GALogin API Server" cmd /c "node server.cjs"
 
 echo [2/4] Dang khoi dong Vite React Frontend Server (Cong 5173)...
@@ -25,7 +31,7 @@ start http://localhost:5173
 echo.
 echo ==========================================================
 echo [HOAN TAT] Tat ca cac dich vu da duoc khoi chay!
-echo   - Local REST API Server:  http://localhost:1010
+echo   - Local REST API Server:  http://localhost:1020
 echo   - Frontend UI Dashboard: http://localhost:5173
 echo.
 echo Vui long giu cua so nay dang mo de duy tri cac dich vu.

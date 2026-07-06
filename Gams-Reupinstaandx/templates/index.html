@@ -145,6 +145,7 @@
                 
                 <!-- Row 2: Compact toolbar containing all actions -->
                 <div class="card-toolbar">
+                    <button class="toolbar-btn" onclick="openDashboard('{{ profile }}')" title="Bảng điều khiển & Thống kê" style="background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25);"><span class="toolbar-icon">📊</span><span class="toolbar-label" style="color: #a5b4fc; font-weight: 600;">Dashboard</span></button>
                     <button class="toolbar-btn toolbar-btn-primary" onclick="startProfile('{{ profile }}')" title="Start Auto Run"><span class="toolbar-icon" style="color: var(--success)">▶</span><span class="toolbar-label">Start</span></button>
                     <button class="toolbar-btn toolbar-btn-danger" onclick="stopProfile('{{ profile }}')" title="Stop Run"><span class="toolbar-icon" style="color: var(--danger)">⏹</span><span class="toolbar-label">Stop</span></button>
                     <button class="toolbar-btn" onclick="openManualBrowser('{{ profile }}')" title="Mở trình duyệt thủ công"><span class="toolbar-icon">🌐</span><span class="toolbar-label">Browser</span></button>
@@ -167,6 +168,42 @@
                             <a onclick="renameProfile('{{ profile }}')">✏️ Đổi tên Profile</a>
                             <div class="dropdown-divider"></div>
                             <a onclick="deleteProfile('{{ profile }}')" class="text-danger">🗑️ Xóa Profile</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Row 2.5: Mini Dashboard -->
+                <div class="mini-dashboard" id="mini-dashboard-{{ profile }}">
+                    <div class="mini-db-grid">
+                        <div class="mini-db-item" title="Tổng số bài viết đã đăng thành công">
+                            <span class="mini-db-icon">📮</span>
+                            <span class="mini-db-value" id="mini-val-total-{{ profile }}">0</span>
+                            <span class="mini-db-label">Đã Reup</span>
+                        </div>
+                        <div class="mini-db-item" title="Tỷ lệ định dạng Ảnh / Video đã đăng">
+                            <span class="mini-db-icon">🖼️</span>
+                            <span class="mini-db-value" id="mini-val-media-{{ profile }}">0/0</span>
+                            <span class="mini-db-label">Ảnh/Video</span>
+                        </div>
+                        <div class="mini-db-item" title="Số bài trùng lặp đã bỏ qua">
+                            <span class="mini-db-icon">🛡️</span>
+                            <span class="mini-db-value" id="mini-val-skipped-{{ profile }}">0</span>
+                            <span class="mini-db-label">Bỏ qua</span>
+                        </div>
+                        <div class="mini-db-item" id="mini-item-errors-{{ profile }}" title="Số lỗi phát hiện trong logs">
+                            <span class="mini-db-icon">⚠️</span>
+                            <span class="mini-db-value" id="mini-val-errors-{{ profile }}">0</span>
+                            <span class="mini-db-label">Lỗi</span>
+                        </div>
+                    </div>
+                    <div class="mini-db-info">
+                        <div class="mini-db-info-row">
+                            <span class="info-label">🔗 Nguồn cào:</span>
+                            <span class="info-value" id="mini-val-sources-{{ profile }}">-</span>
+                        </div>
+                        <div class="mini-db-info-row">
+                            <span class="info-label">📘 Fanpage:</span>
+                            <span class="info-value text-ellipsis" id="mini-val-fanpage-{{ profile }}">-</span>
                         </div>
                     </div>
                 </div>
@@ -236,7 +273,7 @@
                             <textarea id="set_threads_urls" rows="3" placeholder="Ví dụ: https://www.threads.net/@zuck" style="width: 100%; margin-bottom: 1.25rem; box-sizing: border-box;"></textarea>
                             
                             <label>Số bài viết mới nhất cần quét trên mỗi nguồn (Instagram/X/Threads):</label>
-                            <input type="number" id="set_scan_limit" placeholder="Mặc định: 10 (Chỉ tìm trong số lượng bài này để tránh bài viết quá cũ)" min="1" max="50" style="width: 100%; box-sizing: border-box; margin-bottom: 1.25rem;">
+                            <input type="number" id="set_scan_limit" placeholder="Mặc định: 10 (Tối đa: 100 - Chỉ tìm trong số lượng bài này để tránh bài viết quá cũ)" min="1" max="100" style="width: 100%; box-sizing: border-box; margin-bottom: 1.25rem;">
 
                             <label>Giờ quét bài viết mới (Scan Times - ví dụ: 08:00, 12:00, 18:00):</label>
                             <input type="text" id="set_scan_times" placeholder="08:00, 12:00, 18:00" style="width: 100%; box-sizing: border-box;">
@@ -313,6 +350,191 @@
             <div class="modal-footer">
                 <button class="btn btn-stop" onclick="closeFacebookModal()">Hủy</button>
                 <button class="btn btn-start" onclick="saveFacebookAccount()">💾 Lưu tài khoản</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD MODAL -->
+    <div id="dashboard-modal" class="modal">
+        <div class="modal-content" style="max-width: 900px; width: 95%;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <span style="font-size: 1.6rem;">📊</span>
+                    <div>
+                        <h2 id="dashboard-title" style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.4rem; font-weight: 800;">Bảng điều khiển Profile</h2>
+                        <span id="dashboard-profile-name-sub" style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 500;"></span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="card-status-area" style="background: rgba(0,0,0,0.2); padding: 4px 10px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 6px;">
+                        <span class="status-indicator-dot" id="dashboard-status-dot"></span>
+                        <span id="dashboard-status-text" style="font-size: 0.75rem; font-weight: 700; color: #fff; text-transform: uppercase; letter-spacing: 0.05em;">Idle</span>
+                    </div>
+                    <span class="close" onclick="closeDashboard()" style="font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--text-secondary); transition: color 0.2s;">&times;</span>
+                </div>
+            </div>
+            
+            <div class="modal-body" style="padding: 1.25rem 0 0 0; display: flex; flex-direction: column; gap: 1.5rem; max-height: 70vh; overflow-y: auto; padding-right: 5px;">
+                <!-- Row 1: Key Stats Grid (4 columns) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 1rem; width: 100%;">
+                    <!-- Stat 1: Total Reups -->
+                    <div style="background: rgba(99, 102, 241, 0.06); border: 1px solid rgba(99, 102, 241, 0.15); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="font-size: 2.2rem; background: rgba(99, 102, 241, 0.15); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 10px; box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);">📮</div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Tổng Bài Đã Reup</div>
+                            <div id="dash-stat-total" style="font-size: 1.6rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #fff; margin-top: 2px;">0</div>
+                            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 1px;"><span id="dash-stat-images">0</span> ảnh • <span id="dash-stat-videos">0</span> video</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Stat 2: Active / Status -->
+                    <div style="background: rgba(16, 185, 129, 0.06); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="font-size: 2.2rem; background: rgba(16, 185, 129, 0.15); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 10px; box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);">📡</div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Trạng Thái Live</div>
+                            <div id="dash-stat-live" style="font-size: 1.15rem; font-weight: 800; color: #fff; margin-top: 5px; line-height: 1.2;">Chờ kết nối...</div>
+                            <div id="dash-stat-live-detail" style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 2px;">Đang hoạt động</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Stat 3: Skipped/Duplicates -->
+                    <div style="background: rgba(245, 158, 11, 0.06); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="font-size: 2.2rem; background: rgba(245, 158, 11, 0.15); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 10px; box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);">🛡️</div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Bỏ Qua (Trùng)</div>
+                            <div id="dash-stat-skipped" style="font-size: 1.6rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #fff; margin-top: 2px;">0</div>
+                            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 1px;">Bài trùng simhash/pHash</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Stat 4: Errors -->
+                    <div id="dash-stat-error-card" style="background: rgba(244, 63, 94, 0.06); border: 1px solid rgba(244, 63, 94, 0.15); border-radius: 12px; padding: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="font-size: 2.2rem; background: rgba(244, 63, 94, 0.15); width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 10px; box-shadow: 0 0 15px rgba(244, 63, 94, 0.2);">⚠️</div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;">Lỗi & Cảnh Báo</div>
+                            <div id="dash-stat-errors" style="font-size: 1.6rem; font-weight: 800; font-family: 'Outfit', sans-serif; color: #fff; margin-top: 2px;">0</div>
+                            <div id="dash-stat-errors-detail" style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 1px;">Hoạt động an toàn</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Row 2: Sources Grid (Two columns) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 1rem; width: 100%;">
+                    <!-- Column 1: Configured sources & targets -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.25rem;">
+                        <h3 style="margin-top: 0; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">🔗 CẤU HÌNH LIÊN KẾT NGUỒN & ĐÍCH</h3>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <!-- Instagram Sources -->
+                            <div>
+                                <span style="font-size: 0.78rem; font-weight: 600; color: #f43f5e; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; margin-bottom: 3px;">📸 Instagram Source(s)</span>
+                                <div id="dash-src-instagram" style="font-size: 0.82rem; color: rgba(255,255,255,0.85); font-family: monospace; padding-left: 6px; word-break: break-all;">[Không có]</div>
+                            </div>
+                            <!-- X Sources -->
+                            <div>
+                                <span style="font-size: 0.78rem; font-weight: 600; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; margin-bottom: 3px;">🐦 X / Twitter Source(s)</span>
+                                <div id="dash-src-x" style="font-size: 0.82rem; color: rgba(255,255,255,0.85); font-family: monospace; padding-left: 6px; word-break: break-all;">[Không có]</div>
+                            </div>
+                            <!-- Threads Sources -->
+                            <div>
+                                <span style="font-size: 0.78rem; font-weight: 600; color: #fff; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; margin-bottom: 3px;">🧵 Threads Source(s)</span>
+                                <div id="dash-src-threads" style="font-size: 0.82rem; color: rgba(255,255,255,0.85); font-family: monospace; padding-left: 6px; word-break: break-all;">[Không có]</div>
+                            </div>
+                            <!-- Fanpage Destination -->
+                            <div style="border-top: 1px solid rgba(255,255,255,0.05); padding-top: 0.75rem; margin-top: 0.25rem;">
+                                <span style="font-size: 0.78rem; font-weight: 600; color: #10b981; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px; margin-bottom: 3px;">📘 Facebook Fanpage Đích</span>
+                                <div id="dash-dest-fanpage" style="font-size: 0.82rem; color: rgba(255,255,255,0.85); font-family: monospace; padding-left: 6px; word-break: break-all;">[Không có]</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Column 2: Storage Folder paths -->
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.25rem;">
+                        <h3 style="margin-top: 0; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">📁 THƯ MỤC LƯU DỮ LIỆU PROFILE</h3>
+                        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">📂 Media gốc tạm thời (Input Temp):</span>
+                                <div id="dash-path-input" style="font-size: 0.8rem; color: #a5b4fc; font-family: monospace; background: rgba(0,0,0,0.15); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); word-break: break-all;">-</div>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">📂 Bài viết đã rewrite (Output Text):</span>
+                                <div id="dash-path-text" style="font-size: 0.8rem; color: #a5b4fc; font-family: monospace; background: rgba(0,0,0,0.15); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); word-break: break-all;">-</div>
+                            </div>
+                            <div>
+                                <span style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 2px;">📂 Ảnh kết quả AI (Output Image):</span>
+                                <div id="dash-path-image" style="font-size: 0.8rem; color: #a5b4fc; font-family: monospace; background: rgba(0,0,0,0.15); padding: 5px 8px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); word-break: break-all;">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: Critical Error Logs (Hidden by default, shown if there are errors) -->
+                <div id="dash-error-section" style="display: none; background: rgba(244, 63, 94, 0.08); border: 1px solid rgba(244, 63, 94, 0.25); border-radius: 12px; padding: 1.25rem; width: 100%;">
+                    <h3 style="margin-top: 0; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700; color: #fda4af; display: flex; align-items: center; gap: 6px; margin-bottom: 0.75rem;">🚨 LỖI & SỰ CỐ PHÁT HIỆN GẦN ĐÂY</h3>
+                    <ul id="dash-error-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; font-family: monospace; font-size: 0.82rem; color: #fecdd3;">
+                        <!-- JS injected -->
+                    </ul>
+                </div>
+                
+                <!-- Row 4: Recent History Table -->
+                <div style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; padding: 1.25rem; width: 100%; box-sizing: border-box;">
+                    <h3 style="margin-top: 0; font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px; margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">📰 LỊCH SỬ ĐĂNG BÀI GẦN NHẤT (MAX 15 BÀI)</h3>
+                    <div style="overflow-x: auto; max-height: 250px; overflow-y: auto;">
+                        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.85rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.08); color: var(--text-secondary); font-weight: 600;">
+                                    <th style="padding: 8px 10px;">Nền tảng</th>
+                                    <th style="padding: 8px 10px;">ID Bài viết</th>
+                                    <th style="padding: 8px 10px;">Định dạng</th>
+                                    <th style="padding: 8px 10px;">Ngày giờ Reup</th>
+                                    <th style="padding: 8px 10px; text-align: right;">Hành động</th>
+                                </tr>
+                            </thead>
+                            <tbody id="dash-history-table-body">
+                                <!-- JS injected -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem; margin-top: 1.25rem;">
+                <span id="dash-last-updated" style="font-size: 0.75rem; color: var(--text-muted);">Cập nhật lần cuối: -</span>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-save" onclick="refreshDashboard()" style="padding: 0.5rem 1rem; font-size: 0.82rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff;">🔄 Làm mới</button>
+                    <button class="btn btn-stop" onclick="closeDashboard()" style="padding: 0.5rem 1rem; font-size: 0.82rem;">Đóng</button>
+                </div>
+            </div>
+        </div>
+    <!-- CHOOSE REUP MODE MODAL -->
+    <div id="reup-mode-modal" class="modal" style="z-index: 1100;">
+        <div class="modal-content" style="max-width: 450px; width: 90%;">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.75rem;">
+                <h3 style="margin: 0; font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                    ⚡ Lựa chọn chế độ Đăng thủ công
+                </h3>
+                <span class="close" onclick="closeReupModeModal()" style="font-size: 1.5rem; line-height: 1; cursor: pointer; color: var(--text-secondary);">&times;</span>
+            </div>
+            <div class="modal-body" style="padding: 1.25rem 0; color: var(--text-secondary); font-size: 0.9rem;">
+                <p id="reup-mode-desc" style="margin-top: 0; line-height: 1.4; color: #fff;">
+                    Bạn muốn chạy đăng thủ công bài viết này dưới dạng nào?
+                </p>
+                <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: 8px; padding: 10px; margin-bottom: 15px; font-size: 0.8rem; color: #f59e0b; display: flex; gap: 6px;">
+                    <span>💡</span>
+                    <span style="line-height: 1.35;">Đăng thẳng thủ công sẽ bỏ qua các kiểm tra trùng lặp simhash/pHashing để đăng/test trực tiếp bài viết được chọn.</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <!-- Option 1: Đăng thật -->
+                    <button class="btn" onclick="confirmReupMode(false)" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(16, 185, 129, 0.35)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(16, 185, 129, 0.2)';">
+                        🚀 ĐĂNG THẬT LÊN FANPAGE
+                    </button>
+                    <!-- Option 2: Chạy test -->
+                    <button class="btn" onclick="confirmReupMode(true)" style="background: linear-gradient(135deg, #3b82f6, #2563eb); color: white; border: none; padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); transition: all 0.2s;" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 6px 16px rgba(59, 130, 246, 0.35)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 12px rgba(59, 130, 246, 0.2)';">
+                        🧪 CHẠY TEST THỬ NGHIỆM (Draft)
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.75rem; justify-content: flex-end;">
+                <button class="btn btn-stop" onclick="closeReupModeModal()" style="padding: 0.4rem 1rem; font-size: 0.8rem; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); color: #fff;">Hủy bỏ</button>
             </div>
         </div>
     </div>

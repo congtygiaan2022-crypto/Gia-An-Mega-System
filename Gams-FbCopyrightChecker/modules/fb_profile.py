@@ -21,6 +21,15 @@ def get_profile_info(driver: webdriver.Chrome) -> dict:
     Lấy tên, UID và profile URL của tài khoản đang đăng nhập.
     Trả về: {"name": str, "uid": str, "profile_url": str, "avatar": str}
     """
+    from modules.config_loader import CONFIG
+    is_mobile = CONFIG.get("mobile_settings", {}).get("enabled", False)
+    if is_mobile:
+        try:
+            driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": ""})
+            driver.execute_cdp_cmd('Emulation.clearDeviceMetricsOverride', {})
+        except Exception:
+            pass
+
     try:
         driver.get("https://www.facebook.com/me")
         try:
@@ -83,6 +92,23 @@ def get_profile_info(driver: webdriver.Chrome) -> dict:
     except Exception as e:
         log.error(f"Lỗi lấy profile info: {e}")
         return {"name": "", "uid": "", "profile_url": "", "avatar": ""}
+    finally:
+        if is_mobile:
+            try:
+                mobile_cfg = CONFIG.get("mobile_settings", {})
+                user_agents = mobile_cfg.get("user_agents", [])
+                if not user_agents:
+                    user_agents = [
+                        "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1"
+                    ]
+                window_idx = mobile_cfg.get("window_index", 0)
+                mobile_ua = user_agents[window_idx % len(user_agents)]
+                driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": mobile_ua})
+                driver.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', {
+                    "width": 375, "height": 812, "deviceScaleFactor": 3, "mobile": True
+                })
+            except Exception:
+                pass
 
 
 
@@ -91,6 +117,15 @@ def get_fanpages(driver: webdriver.Chrome) -> list[dict]:
     Lấy danh sách fanpage bằng cách truy cập /pages/?category=your_pages&ref=bookmarks.
     Cuộn để tải toàn bộ danh sách trang, hỗ trợ click nút "Xem thêm".
     """
+    from modules.config_loader import CONFIG
+    is_mobile = CONFIG.get("mobile_settings", {}).get("enabled", False)
+    if is_mobile:
+        try:
+            driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": ""})
+            driver.execute_cdp_cmd('Emulation.clearDeviceMetricsOverride', {})
+        except Exception:
+            pass
+
     pages = []
     seen = set()
     try:
@@ -169,6 +204,23 @@ def get_fanpages(driver: webdriver.Chrome) -> list[dict]:
         log.info(f"Tổng hợp tìm thấy {len(pages)} fanpage")
     except Exception as e:
         log.error(f"Lỗi lấy fanpage tổng hợp: {e}")
+    finally:
+        if is_mobile:
+            try:
+                mobile_cfg = CONFIG.get("mobile_settings", {})
+                user_agents = mobile_cfg.get("user_agents", [])
+                if not user_agents:
+                    user_agents = [
+                        "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1"
+                    ]
+                window_idx = mobile_cfg.get("window_index", 0)
+                mobile_ua = user_agents[window_idx % len(user_agents)]
+                driver.execute_cdp_cmd('Network.setUserAgentOverride', {"userAgent": mobile_ua})
+                driver.execute_cdp_cmd('Emulation.setDeviceMetricsOverride', {
+                    "width": 375, "height": 812, "deviceScaleFactor": 3, "mobile": True
+                })
+            except Exception:
+                pass
 
     return pages
 

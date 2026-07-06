@@ -34,17 +34,40 @@ def main(profile_name):
     
     try:
         import profile_manager
+        from worker_process import check_and_login_instagram_playwright, check_and_login_threads_playwright
+        
         with sync_playwright() as p:
             pm = profile_manager.ProfileManager(config.get("profiles_dir", "profiles"))
             context = pm.launch_browser_for_profile(p, profile_name, headless=False)
             
-            page = context.pages[0] if context.pages else context.new_page()
+            page_fb = context.pages[0] if context.pages else context.new_page()
+            print(f"[{profile_name}] Đang mở Tab Facebook...")
+            page_fb.goto("https://www.facebook.com")
             
-            # Điều hướng tự động tới Facebook để người dùng đăng nhập
-            page.goto("https://facebook.com")
+            # Tự động kiểm tra và đăng nhập Instagram và Threads trong background
+            print(f"[{profile_name}] Đang kiểm tra tự động đăng nhập Instagram...")
+            try:
+                check_and_login_instagram_playwright(context, profile_name)
+            except Exception as e:
+                print(f"Lỗi đăng nhập tự động Instagram: {e}")
+                
+            print(f"[{profile_name}] Đang kiểm tra tự động đăng nhập Threads...")
+            try:
+                check_and_login_threads_playwright(context, profile_name)
+            except Exception as e:
+                print(f"Lỗi đăng nhập tự động Threads: {e}")
+                
+            # Mở thêm tab cho Instagram và Threads để người dùng dễ kiểm tra trực quan
+            print(f"[{profile_name}] Đang mở các Tab trực quan cho Instagram và Threads...")
+            page_ig = context.new_page()
+            page_ig.goto("https://www.instagram.com")
             
-            # Chờ cho đến khi context bị đóng (người dùng bấm dấu X)
-            page.wait_for_event("close", timeout=0)
+            page_th = context.new_page()
+            page_th.goto("https://www.threads.net")
+            
+            # Đưa tab Facebook lên trước và chờ người dùng tắt trình duyệt
+            page_fb.bring_to_front()
+            page_fb.wait_for_event("close", timeout=0)
     except Exception as e:
         print(f"\n[Lỗi] Không thể mở trình duyệt: {e}")
         import time

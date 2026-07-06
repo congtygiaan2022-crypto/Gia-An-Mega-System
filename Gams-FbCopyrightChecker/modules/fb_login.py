@@ -101,6 +101,60 @@ def _build_service():
     return Service()
 
 
+def configure_window_layout(driver: webdriver.Chrome, is_mobile: bool, window_index: int, grid_rows: int, grid_cols: int):
+    """
+    Sắp xếp cửa sổ trình duyệt theo dạng lưới trên màn hình nếu ở chế độ Mobile.
+    Mặc định tỉ lệ dọc (9:16 - mô phỏng 1080x1900).
+    """
+    if not is_mobile:
+        return
+
+    # Tỉ lệ dọc 9:16 (ví dụ 1080:1900)
+    aspect_ratio = 9.0 / 16.0
+
+    try:
+        import ctypes
+        user32 = ctypes.windll.user32
+        screen_w = user32.GetSystemMetrics(0)
+        screen_h = user32.GetSystemMetrics(1)
+    except Exception:
+        # Fallback nếu lỗi hoặc không ở Windows
+        screen_w = 1920
+        screen_h = 1080
+
+    # Tính kích thước ô trong lưới
+    cell_w = screen_w // grid_cols
+    cell_h = screen_h // grid_rows
+
+    # Trừ bớt padding cho thanh tác vụ và viền cửa sổ
+    max_win_h = cell_h - 60
+    max_win_w = cell_w - 20
+
+    # Tính kích thước cửa sổ theo tỉ lệ dọc
+    win_h = max_win_h
+    win_w = int(win_h * aspect_ratio)
+
+    if win_w > max_win_w:
+        win_w = max_win_w
+        win_h = int(win_w / aspect_ratio)
+
+    win_w = max(320, min(win_w, screen_w))
+    win_h = max(480, min(win_h, screen_h))
+
+    # Tính toạ độ hiển thị (X, Y) ở trung tâm ô lưới
+    row = window_index // grid_cols
+    col = window_index % grid_cols
+
+    x = col * cell_w + (cell_w - win_w) // 2
+    y = row * cell_h + (cell_h - win_h) // 2
+
+    try:
+        log.info(f"Mobile Window positioning: index={window_index}, grid={grid_rows}x{grid_cols}, pos=({x},{y}), size=({win_w}x{win_h})")
+        driver.set_window_rect(x, y, win_w, win_h)
+    except Exception as e:
+        log.warning(f"Failed to set window position/size: {e}")
+
+
 def build_driver(profile_dir: str = None) -> webdriver.Chrome:
     cfg = CONFIG["selenium"]
     options = Options()
@@ -110,8 +164,24 @@ def build_driver(profile_dir: str = None) -> webdriver.Chrome:
         log.info(f"Using Chrome binary: {binary}")
     if cfg["headless"]:
         options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080")
-    options.add_argument("--start-maximized")
+    
+    mobile_cfg = CONFIG.get("mobile_settings", {})
+    is_mobile = False # Luôn khởi động ở chế độ PC để đăng nhập ổn định
+    if is_mobile:
+        log.info("Mobile mode enabled, skipping start-maximized options.")
+        user_agents = mobile_cfg.get("user_agents", [])
+        if not user_agents:
+            user_agents = [
+                "Mozilla/5.0 (iPhone; CPU iPhone OS 19_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/130.0.0.0 Mobile/15E148 Safari/604.1"
+            ]
+        window_idx = mobile_cfg.get("window_index", 0)
+        mobile_ua = user_agents[window_idx % len(user_agents)]
+        options.add_argument(f"--user-agent={mobile_ua}")
+        log.info(f"Loaded Mobile User Agent for Chrome startup: {mobile_ua}")
+    else:
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--start-maximized")
+
     options.add_argument("--disable-hang-monitor")
     options.add_argument("--disable-notifications")
     options.add_argument("--disable-dev-shm-usage")
@@ -133,6 +203,13 @@ def build_driver(profile_dir: str = None) -> webdriver.Chrome:
     driver.implicitly_wait(cfg["implicit_wait"])
     driver.set_page_load_timeout(cfg["page_load_timeout"])
     driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+    
+    if is_mobile:
+        window_index = mobile_cfg.get("window_index", 0)
+        grid_rows = mobile_cfg.get("grid_rows", 1)
+        grid_cols = mobile_cfg.get("grid_cols", 1)
+        configure_window_layout(driver, is_mobile, window_index, grid_rows, grid_cols)
+
     log.info(f"Chrome driver initialized (profile: {profile_dir})")
     return driver
 
@@ -304,24 +381,52 @@ def _handle_2fa(driver: webdriver.Chrome, wait: WebDriverWait) -> bool:
 
 
 def _is_logged_in(driver: webdriver.Chrome) -> bool:
-    url = driver.current_url
+    url = driver.current_url or ""
     if "facebook.com" not in url or "login" in url or "checkpoint" in url or "two_step" in url:
         return False
-    return bool(driver.find_elements(By.CSS_SELECTOR,
+
+    # 1. Kiểm tra qua Javascript Environment variables của Facebook
+    try:
+        uid = driver.execute_script(
+            "return (window.Env && window.Env.userid) ? window.Env.userid.toString() : '';"
+        )
+        if uid and uid.isdigit():
+            return True
+    except Exception:
+        pass
+
+    # 2. Kiểm tra qua Cookies
+    try:
+        for cookie in driver.get_cookies():
+            if cookie.get('name') == 'c_user' and str(cookie.get('value', '')).isdigit():
+                return True
+    except Exception:
+        pass
+
+    # 3. Kiểm tra qua UI elements
+    desktop_ok = bool(driver.find_elements(By.CSS_SELECTOR,
         "[data-pagelet='LeftRail'], [aria-label='Your profile'], [data-testid='royal_blue_bar'], [aria-label='Facebook'][role='navigation']"))
+    mobile_ok = bool(driver.find_elements(By.CSS_SELECTOR,
+        "header[data-sigil='MBasicHeader'], [data-sigil='m-header-search-link'], a[href*='/notifications'], a[href*='/logout.php'], .m-home-header, [aria-label='Facebook Menu'], [aria-label='Search Facebook']"))
+    return desktop_ok or mobile_ok or ("home.php" in url or "home" in url or "feed" in url or "watch" in url)
+
 
 
 def login(driver: webdriver.Chrome) -> bool:
     fb = CONFIG["facebook"]
+    mobile_cfg = CONFIG.get("mobile_settings", {})
+    is_mobile = False # Luôn khởi động ở chế độ PC để đăng nhập ổn định
+
+    base_url = "https://m.facebook.com" if is_mobile else "https://www.facebook.com"
 
     # Kiểm tra xem đã login chưa (dùng cookies từ profile đã lưu)
     log.info("Kiểm tra session đã lưu...")
-    driver.get("https://www.facebook.com/")
+    driver.get(base_url + "/")
     
     try:
         # Chờ tối đa 5 giây xem trang chủ Facebook load xong hoặc có biểu hiện đã đăng nhập
         WebDriverWait(driver, 5).until(
-            lambda d: d.find_elements(By.CSS_SELECTOR, "[aria-label='Facebook'][role='navigation'], [data-pagelet='LeftRail'], [aria-label='Your profile'], [data-testid='royal_blue_bar']") or 
+            lambda d: d.find_elements(By.CSS_SELECTOR, "[aria-label='Facebook'][role='navigation'], [data-pagelet='LeftRail'], [aria-label='Your profile'], [data-testid='royal_blue_bar'], header[data-sigil='MBasicHeader'], a[href*='/logout.php'], .m-home-header") or 
                       "login" in d.current_url or "checkpoint" in d.current_url
         )
     except Exception:
@@ -332,12 +437,12 @@ def login(driver: webdriver.Chrome) -> bool:
         return True
 
     log.info("Đang mở trang đăng nhập Facebook...")
-    driver.get("https://www.facebook.com/login")
+    driver.get(base_url + "/login")
     wait = WebDriverWait(driver, 15)
 
     try:
         try:
-            email_field = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='email']")))
+            email_field = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='email'], input#m_login_email, input[id='m_login_email']")))
         except Exception:
             # Maybe already logged in and redirected
             if _is_logged_in(driver):
@@ -349,18 +454,25 @@ def login(driver: webdriver.Chrome) -> bool:
         email_field.clear()
         email_field.send_keys(fb["email"])
 
-        pass_field = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='pass'], input[id='pass']")))
+        pass_field = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "input[name='pass'], input[id='pass'], input#m_login_password, input[id='m_login_password']")))
         pass_field.click()
         pass_field.clear()
         pass_field.send_keys(fb["password"])
 
-        pass_field.send_keys("\n")
+        # Thử click nút Đăng nhập / Log In
+        try:
+            login_btn = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "button[name='login'], button[type='submit'], input[type='submit'], button[id='loginbutton']")))
+            login_btn.click()
+            log.info("Đã click nút Đăng nhập")
+        except Exception:
+            pass_field.send_keys("\n")
+            log.info("Không tìm thấy nút đăng nhập — gửi phím Enter")
         
         # Chờ chuyển hướng sau khi đăng nhập mật khẩu
         try:
             WebDriverWait(driver, 10).until(
                 lambda d: "login" not in d.current_url or 
-                          d.find_elements(By.CSS_SELECTOR, "[aria-label='Facebook'][role='navigation'], [data-pagelet='LeftRail'], [aria-label='Your profile']") or
+                          d.find_elements(By.CSS_SELECTOR, "[aria-label='Facebook'][role='navigation'], [data-pagelet='LeftRail'], [aria-label='Your profile'], header[data-sigil='MBasicHeader'], a[href*='/logout.php'], .m-home-header") or
                           "checkpoint" in d.current_url or "two_step" in d.current_url
             )
         except Exception:

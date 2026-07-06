@@ -1,44 +1,363 @@
 [
   {
-    "id": "p-1781458177815",
-    "name": "Test 3",
-    "group": "Facebook Ads",
-    "proxy": "No Proxy (Direct)",
-    "browserVersion": "Chromium 125.0",
-    "lastOpened": "2026-06-22 15:29",
+    "id": "p-1783304237740",
+    "name": "Via Us 005",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1783304237740",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "vi-VN,vi;q=0.9",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
     "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "Chưa sử dụng",
+    "port": 15008,
+    "platform": "Windows",
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
+  },
+  {
+    "id": "p-1783304237734",
+    "name": "Via Us 004",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1783304237734",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "vi-VN,vi;q=0.9",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
+    "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "Chưa sử dụng",
+    "port": 15007,
+    "platform": "Windows",
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
+  },
+  {
+    "id": "p-1783304237703",
+    "name": "Via Us 003",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1783304237703",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "vi-VN,vi;q=0.9",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
+    "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "Chưa sử dụng",
+    "port": 15006,
+    "platform": "Windows",
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
+  },
+  {
+    "id": "p-1783304237694",
+    "name": "Via Us 002",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1783304237694",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "vi-VN,vi;q=0.9",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
+    "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "Chưa sử dụng",
+    "port": 15005,
+    "platform": "Windows",
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
+  },
+  {
+    "id": "p-1783304237678",
+    "name": "Via Us 001",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1783304237678",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "vi-VN,vi;q=0.9",
+    "timezone": "Asia/Ho_Chi_Minh",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
+    "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "Chưa sử dụng",
+    "port": 15004,
+    "platform": "Windows",
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
+  },
+  {
+    "id": "p-1781458177815",
+    "name": "Via US 3",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1781458177815",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "en-US,en;q=0.9",
+    "timezone": "America/Los_Angeles",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
+    "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "2026-06-22 15:29",
+    "port": 15003,
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "browserVersion": "Chromium 125.0",
     "cookiesCount": 0,
     "platform": "Windows",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "port": 15003,
-    "status": "stopped"
+    "status": "stopped",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
   },
   {
     "id": "p-1781458170806",
-    "name": "Test 2",
-    "group": "Facebook Ads",
-    "proxy": "No Proxy (Direct)",
-    "browserVersion": "Chromium 125.0",
-    "lastOpened": "2026-06-22 15:29",
+    "name": "Via US 2",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1781458170806",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "en-US,en;q=0.9",
+    "timezone": "America/Los_Angeles",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
     "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "2026-06-22 15:29",
+    "port": 15002,
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "browserVersion": "Chromium 125.0",
     "cookiesCount": 0,
     "platform": "Windows",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "port": 15002,
-    "status": "stopped"
+    "status": "stopped",
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
   },
   {
     "id": "p-1781279053499",
-    "name": "Test 1",
-    "group": "Facebook Ads",
-    "proxy": "No Proxy (Direct)",
-    "browserVersion": "Chromium 125.0",
-    "lastOpened": "2026-06-22 15:29",
+    "name": "Via US 1",
+    "browserType": "chromium",
+    "executablePath": "",
+    "userDataDir": "E:\\Gams-GALogin\\bin\\profiles\\p-1781279053499",
+    "proxyConfig": {
+      "type": "HTTP",
+      "host": "143.14.173.125",
+      "port": "20969",
+      "username": "hip123456",
+      "password": "hip123456",
+      "pacUrl": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+    "windowSize": {
+      "width": 1280,
+      "height": 720,
+      "x": 50,
+      "y": 50
+    },
+    "language": "en-US,en;q=0.9",
+    "timezone": "America/Los_Angeles",
+    "startupConfig": {
+      "mode": "blank",
+      "urls": []
+    },
+    "downloadDir": "",
+    "extensions": [],
     "notes": "",
+    "group": "Facebook Ads",
+    "browserArguments": [
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-notifications"
+    ],
+    "lastOpened": "2026-06-22 15:29",
+    "port": 15001,
+    "proxy": "143.14.173.125:20969 (HTTP)",
+    "browserVersion": "Chromium 125.0",
     "cookiesCount": 0,
     "platform": "Windows",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
     "status": "stopped",
-    "port": 15001
+    "hardwareConcurrency": 8,
+    "deviceMemory": 8,
+    "spoofFingerprints": true
   }
 ]
