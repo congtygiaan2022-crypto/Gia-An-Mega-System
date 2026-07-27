@@ -1,3 +1,14 @@
-2026/07/06-07:51:49.935 f864 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/MANIFEST-000001
-2026/07/06-07:51:49.944 f864 Recovering log #1684
-2026/07/06-07:51:49.946 f864 Reusing old log E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/001684.log 
+2026/07/27-13:37:07.664 30834 Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\Local Storage\leveldb/MANIFEST-000001
+2026/07/27-13:37:07.673 30834 Recovering log #141
+2026/07/27-13:37:07.684 30834 Level-0 table #143: started
+2026/07/27-13:37:07.697 30834 Level-0 table #143: 131956 bytes OK
+2026/07/27-13:37:07.702 30834 Delete type=0 #141
+2026/07/27-13:37:07.703 2800c Compacting 4@0 + 1@1 files
+2026/07/27-13:37:07.746 2800c Generated table #145@0: 4004 keys, 458914 bytes
+2026/07/27-13:37:07.746 2800c Compacted 4@0 + 1@1 files => 458914 bytes
+2026/07/27-13:37:07.747 2800c compacted to: files[ 0 1 1 0 0 0 0 ]
+2026/07/27-13:37:07.748 2800c Delete type=2 #133
+2026/07/27-13:37:07.748 2800c Delete type=2 #135
+2026/07/27-13:37:07.748 2800c Delete type=2 #138
+2026/07/27-13:37:07.749 2800c Delete type=2 #140
+2026/07/27-13:37:07.749 2800c Delete type=2 #143

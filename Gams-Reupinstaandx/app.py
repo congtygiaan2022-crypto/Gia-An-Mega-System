@@ -29,7 +29,7 @@ def index():
     profiles = get_profiles_list()
     return render_template('index.html', profiles=profiles)
 
-@app.route('/api/rename_profile/<old_name>', methods=['POST'])
+@app.route('/api/rename_profile/<path:old_name>', methods=['POST'])
 def rename_profile(old_name):
     new_name = request.json.get('new_name')
     if not new_name or new_name == old_name:
@@ -82,7 +82,7 @@ def create_profile():
     
     return jsonify({"success": True, "message": "Đã tạo Profile thành công!"})
 
-@app.route('/api/delete_profile/<profile_name>', methods=['POST'])
+@app.route('/api/delete_profile/<path:profile_name>', methods=['POST'])
 def delete_profile(profile_name):
     config = bot_controller_instance._load_config()
     profiles = get_profiles_list()
@@ -104,7 +104,7 @@ def delete_profile(profile_name):
 def get_status():
     return jsonify(bot_controller_instance.get_status())
 
-@app.route('/api/start/<profile_name>', methods=['POST'])
+@app.route('/api/start/<path:profile_name>', methods=['POST'])
 def start_profile(profile_name):
     profiles_cfg = db_manager.get_profile_config(profile_name)
     if profiles_cfg.get('is_active') is False:
@@ -113,12 +113,12 @@ def start_profile(profile_name):
     success, msg = bot_controller_instance.start_profile(profile_name, profiles_cfg, global_cfg)
     return jsonify({"success": success, "message": msg})
 
-@app.route('/api/stop/<profile_name>', methods=['POST'])
+@app.route('/api/stop/<path:profile_name>', methods=['POST'])
 def stop_profile(profile_name):
     success, msg = bot_controller_instance.stop_profile(profile_name)
     return jsonify({"success": success, "message": msg})
 
-@app.route('/api/manual_browser/<profile_name>', methods=['POST'])
+@app.route('/api/manual_browser/<path:profile_name>', methods=['POST'])
 def manual_browser(profile_name):
     import subprocess
     import sys
@@ -135,7 +135,7 @@ def manual_browser(profile_name):
     )
     return jsonify({"success": True, "message": f"Đang mở trình duyệt thủ công cho {profile_name}..."})
 
-@app.route('/api/gpt_register/<profile_name>', methods=['POST'])
+@app.route('/api/gpt_register/<path:profile_name>', methods=['POST'])
 def gpt_register(profile_name):
     import subprocess
     import sys
@@ -241,7 +241,7 @@ def restart_tool():
     os._exit(0)
     return jsonify({"success": True})
 
-@app.route('/api/clear_log/<profile_name>', methods=['POST'])
+@app.route('/api/clear_log/<path:profile_name>', methods=['POST'])
 def clear_log(profile_name):
     db_manager.clear_profile_log(profile_name)
     return jsonify({"success": True, "message": f"Đã xóa log cho {profile_name}."})
@@ -251,18 +251,18 @@ def clear_all_logs():
     db_manager.clear_all_profile_logs()
     return jsonify({"success": True, "message": "Đã xóa log của tất cả profile."})
 
-@app.route('/api/profile_config/<profile_name>', methods=['GET'])
+@app.route('/api/profile_config/<path:profile_name>', methods=['GET'])
 def get_profile_config(profile_name):
     cfg = db_manager.get_profile_config(profile_name)
     return jsonify(cfg)
 
-@app.route('/api/profile_config/<profile_name>', methods=['POST'])
+@app.route('/api/profile_config/<path:profile_name>', methods=['POST'])
 def save_profile_config(profile_name):
     data = request.json
     db_manager.save_profile_config(profile_name, data)
     return jsonify({"success": True})
 
-@app.route('/api/dashboard/<profile_name>', methods=['GET'])
+@app.route('/api/dashboard/<path:profile_name>', methods=['GET'])
 def get_dashboard_stats(profile_name):
     try:
         stats = db_manager.get_profile_dashboard_stats(profile_name)
@@ -277,7 +277,7 @@ def get_dashboard_stats(profile_name):
     except Exception as e:
         return jsonify({"success": False, "message": str(e)})
 
-@app.route('/api/reup_post_manual/<profile_name>', methods=['POST'])
+@app.route('/api/reup_post_manual/<path:profile_name>', methods=['POST'])
 def reup_post_manual(profile_name):
     # Check if the profile is currently running auto task to avoid Chromium conflicts
     state = bot_controller_instance.profiles_state.get(profile_name)

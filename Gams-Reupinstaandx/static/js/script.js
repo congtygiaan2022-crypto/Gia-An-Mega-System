@@ -155,7 +155,7 @@ async function restartTool() {
 
 async function startProfile(profile) {
     try {
-        const response = await fetch(`/api/start/${profile}`, { method: 'POST' });
+        const response = await fetch(`/api/start/${encodeURIComponent(profile)}`, { method: 'POST' });
         const data = await response.json();
         if (data.success) updateLog(profile, "Đang gửi lệnh Start...");
         else updateLog(profile, "Lỗi: " + data.message);
@@ -164,7 +164,7 @@ async function startProfile(profile) {
 
 async function stopProfile(profile) {
     try {
-        const response = await fetch(`/api/stop/${profile}`, { method: 'POST' });
+        const response = await fetch(`/api/stop/${encodeURIComponent(profile)}`, { method: 'POST' });
         const data = await response.json();
         if (data.success) updateLog(profile, "Đang gửi lệnh Stop...");
         else updateLog(profile, "Lỗi: " + data.message);
@@ -174,7 +174,7 @@ async function stopProfile(profile) {
 async function clearProfileLog(profile) {
     if (!confirm(`Bạn có chắc muốn xóa sạch log của ${profile} không?`)) return;
     try {
-        const response = await fetch(`/api/clear_log/${profile}`, { method: 'POST' });
+        const response = await fetch(`/api/clear_log/${encodeURIComponent(profile)}`, { method: 'POST' });
         const data = await response.json();
         if (data.success) {
             const logList = document.getElementById(`log-list-${profile}`);
@@ -204,7 +204,7 @@ async function renameProfile(oldName) {
     if (!newName || newName === oldName) return;
     
     try {
-        const response = await fetch(`/api/rename_profile/${oldName}`, {
+        const response = await fetch(`/api/rename_profile/${encodeURIComponent(oldName)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ new_name: newName })
@@ -247,7 +247,7 @@ async function deleteProfile(profileName) {
     if (!confirm(`🚨 BẠN CÓ CHẮC CHẮN MUỐN XÓA PROFILE "${profileName}" KHÔNG?\nHành động này sẽ gỡ Profile khỏi Dashboard.`)) return;
     
     try {
-        const response = await fetch(`/api/delete_profile/${profileName}`, {
+        const response = await fetch(`/api/delete_profile/${encodeURIComponent(profileName)}`, {
             method: 'POST'
         });
         const data = await response.json();
@@ -264,7 +264,7 @@ async function deleteProfile(profileName) {
 
 async function openManualBrowser(profile) {
     try {
-        const response = await fetch(`/api/manual_browser/${profile}`, { method: 'POST' });
+        const response = await fetch(`/api/manual_browser/${encodeURIComponent(profile)}`, { method: 'POST' });
         const data = await response.json();
         if (data.success) {
             alert(data.message);
@@ -279,7 +279,7 @@ async function openManualBrowser(profile) {
 
 async function createOrSwitchGPTAccount(profile) {
     try {
-        const response = await fetch(`/api/gpt_register/${profile}`, { method: 'POST' });
+        const response = await fetch(`/api/gpt_register/${encodeURIComponent(profile)}`, { method: 'POST' });
         const data = await response.json();
         if (data.success) {
             alert(data.message);
@@ -386,7 +386,7 @@ async function openSettings(profile) {
     switchSettingsTab('tab-general');
     
     try {
-        const response = await fetch(`/api/profile_config/${profile}`);
+        const response = await fetch(`/api/profile_config/${encodeURIComponent(profile)}`);
         const config = await response.json();
         
         const aiSource = config.ai_source || 'google';
@@ -495,7 +495,7 @@ async function saveSettings() {
     };
     
     try {
-        const response = await fetch(`/api/profile_config/${currentProfileEdit}`, {
+        const response = await fetch(`/api/profile_config/${encodeURIComponent(currentProfileEdit)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
@@ -688,7 +688,7 @@ async function openFacebookModal(profile) {
     document.getElementById('facebook-modal-title').innerText = "Cài đặt Facebook: " + profile;
     
     try {
-        const response = await fetch(`/api/profile_config/${profile}`);
+        const response = await fetch(`/api/profile_config/${encodeURIComponent(profile)}`);
         const config = await response.json();
         
         document.getElementById('set_facebook_account').value = config.facebook_account || '';
@@ -710,12 +710,12 @@ async function saveFacebookAccount() {
     
     try {
         // Lấy cấu hình hiện tại để tránh bị ghi đè mất các trường khác
-        const getResponse = await fetch(`/api/profile_config/${currentProfileEdit}`);
+        const getResponse = await fetch(`/api/profile_config/${encodeURIComponent(currentProfileEdit)}`);
         const config = await getResponse.json() || {};
         
         config.facebook_account = fbAccount;
         
-        const response = await fetch(`/api/profile_config/${currentProfileEdit}`, {
+        const response = await fetch(`/api/profile_config/${encodeURIComponent(currentProfileEdit)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(config)
@@ -894,8 +894,8 @@ async function updateDashboardData(profile) {
     try {
         // Tải config & stats từ API song song
         const [configRes, statsRes] = await Promise.all([
-            fetch(`/api/profile_config/${profile}`),
-            fetch(`/api/dashboard/${profile}`)
+            fetch(`/api/profile_config/${encodeURIComponent(profile)}`),
+            fetch(`/api/dashboard/${encodeURIComponent(profile)}`)
         ]);
         
         const config = await configRes.json();
@@ -1105,7 +1105,7 @@ async function executeReupPostManual(profile, platform, postId, buttonEl, bypass
     buttonEl.style.borderColor = "rgba(245, 158, 11, 0.4)";
     
     try {
-        const response = await fetch(`/api/reup_post_manual/${profile}`, {
+        const response = await fetch(`/api/reup_post_manual/${encodeURIComponent(profile)}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

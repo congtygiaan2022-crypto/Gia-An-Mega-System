@@ -741,7 +741,7 @@ def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, 
                 if manual_platform == "instagram":
                     post_url = f"https://www.instagram.com/p/{manual_post_id}/"
                 elif manual_platform == "threads":
-                    post_url = f"https://www.threads.net/post/{manual_post_id}"
+                    post_url = f"https://www.threads.net/t/{manual_post_id}"
                 else: # manual_platform == "x"
                     post_url = f"https://x.com/x/status/{manual_post_id}"
                 

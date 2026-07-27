@@ -1,0 +1,37 @@
+Found 37 tags containing auth text:
+
+--- Match 31 ---
+Tag: div
+Attributes: {'class': ['x9f619', 'x1ja2u2z', 'x78zum5', 'x1n2onr6', 'x1iyjqo2', 'xs83m0k', 'xeuugli', 'x1qughib', 'x6s0dn4', 'x1a02dak', 'x1q0g3np', 'xdl72j9']}
+Text: 'Ứng dụng xác thựcNhận mã từ ứng dụng xác thực.'
+OuterHTML: <div class="x9f619 x1ja2u2z x78zum5 x1n2onr6 x1iyjqo2 xs83m0k xeuugli x1qughib x6s0dn4 x1a02dak x1q0g3np xdl72j9"><div class="x9f619 x1n2onr6 x1ja2u2z x78zum5 xdt5ytf x2lah0s x193iq5w xeuugli x1iyjqo2"><div aria-hidden="true" class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl"><div class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl" id="_r_9_"><div class="x1diwwjn xbmvrgn"><div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejjpt x15dsfl
+
+--- Match 32 ---
+Tag: div
+Attributes: {'class': ['x9f619', 'x1n2onr6', 'x1ja2u2z', 'x78zum5', 'xdt5ytf', 'x2lah0s', 'x193iq5w', 'xeuugli', 'x1iyjqo2']}
+Text: 'Ứng dụng xác thựcNhận mã từ ứng dụng xác thực.'
+OuterHTML: <div class="x9f619 x1n2onr6 x1ja2u2z x78zum5 xdt5ytf x2lah0s x193iq5w xeuugli x1iyjqo2"><div aria-hidden="true" class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl"><div class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl" id="_r_9_"><div class="x1diwwjn xbmvrgn"><div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejjpt x15dsfln x193iq5w xeuugli x1fj9vlw x13faqbe x1vvkbs x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x1sfkdl8 xurcqga
+
+--- Match 33 ---
+Tag: div
+Attributes: {'aria-hidden': 'true', 'class': ['html-div', 'xdj266r', 'x14z9mp', 'xat24cr', 'x1lziwak', 'xexx8yu', 'xyri2b', 'x18d9i69', 'x1c1uobl']}
+Text: 'Ứng dụng xác thựcNhận mã từ ứng dụng xác thực.'
+OuterHTML: <div aria-hidden="true" class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl"><div class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl" id="_r_9_"><div class="x1diwwjn xbmvrgn"><div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejjpt x15dsfln x193iq5w xeuugli x1fj9vlw x13faqbe x1vvkbs x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x1sfkdl8 xurcqga x3vd66c xhqx0jl xzsf02u x1yc453h xudqn12 x3x7a5m xjpr12u x1nn3v0j" style="--x---base-li
+
+--- Match 34 ---
+Tag: div
+Attributes: {'id': '_r_9_', 'class': ['html-div', 'xdj266r', 'x14z9mp', 'xat24cr', 'x1lziwak', 'xexx8yu', 'xyri2b', 'x18d9i69', 'x1c1uobl']}
+Text: 'Ứng dụng xác thựcNhận mã từ ứng dụng xác thực.'
+OuterHTML: <div class="html-div xdj266r x14z9mp xat24cr x1lziwak xexx8yu xyri2b x18d9i69 x1c1uobl" id="_r_9_"><div class="x1diwwjn xbmvrgn"><div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejjpt x15dsfln x193iq5w xeuugli x1fj9vlw x13faqbe x1vvkbs x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x1sfkdl8 xurcqga x3vd66c xhqx0jl xzsf02u x1yc453h xudqn12 x3x7a5m xjpr12u x1nn3v0j" style="--x---base-line-clamp-line-height: calc(var(--primary-label-line-height) * 1em); --x-lineHeight: calc(var(--primary-labe
+
+--- Match 35 ---
+Tag: div
+Attributes: {'class': ['x1diwwjn', 'xbmvrgn']}
+Text: 'Ứng dụng xác thựcNhận mã từ ứng dụng xác thực.'
+OuterHTML: <div class="x1diwwjn xbmvrgn"><div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejjpt x15dsfln x193iq5w xeuugli x1fj9vlw x13faqbe x1vvkbs x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x1sfkdl8 xurcqga x3vd66c xhqx0jl xzsf02u x1yc453h xudqn12 x3x7a5m xjpr12u x1nn3v0j" style="--x---base-line-clamp-line-height: calc(var(--primary-label-line-height) * 1em); --x-lineHeight: calc(var(--primary-label-line-height) * 1em);">Ứng dụng xác thực</div><div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejj
+
+--- Match 36 ---
+Tag: div
+Attributes: {'class': ['x1lliihq', 'x1plvlek', 'xryxfnj', 'x1n2onr6', 'xyejjpt', 'x15dsfln', 'x193iq5w', 'xeuugli', 'x1fj9vlw', 'x13faqbe', 'x1vvkbs', 'x1s928wv', 'xhkezso', 'x1gmr53x', 'x1cpjm7i', 'x1fgarty', 'x1943h6x', 'x1sfkdl8', 'xurcqga', 'x3vd66c', 'xhqx0jl', 'xzsf02u', 'x1yc453h', 'xudqn12', 'x3x7a5m', 'xjpr12u', 'x1nn3v0j'], 'style': '--x---base-line-clamp-line-height: calc(var(--primary-label-line-height) * 1em); --x-lineHeight: calc(var(--primary-label-line-height) * 1em);'}
+Text: 'Ứng dụng xác thực'
+OuterHTML: <div class="x1lliihq x1plvlek xryxfnj x1n2onr6 xyejjpt x15dsfln x193iq5w xeuugli x1fj9vlw x13faqbe x1vvkbs x1s928wv xhkezso x1gmr53x x1cpjm7i x1fgarty x1943h6x x1sfkdl8 xurcqga x3vd66c xhqx0jl xzsf02u x1yc453h xudqn12 x3x7a5m xjpr12u x1nn3v0j" style="--x---base-line-clamp-line-height: calc(var(--primary-label-line-height) * 1em); --x-lineHeight: calc(var(--primary-label-line-height) * 1em);">Ứng dụng xác thực</div>
