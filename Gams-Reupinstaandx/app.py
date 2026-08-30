@@ -393,7 +393,7 @@ def start_file_watcher():
 
 if __name__ == '__main__':
     # Lưu PID của tiến trình Flask để stop.bat chỉ tắt đúng app này
-    with open("app.pid", "w") as f:
+    with open("app.pid", "w", encoding="utf-8") as f:
         f.write(str(os.getpid()))
 
     # Khởi động file watcher để tự động restart khi thay đổi file

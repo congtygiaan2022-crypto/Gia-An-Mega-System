@@ -1,0 +1,95 @@
+{
+   "action": {
+      "default_icon": "/icons/favicon16.png",
+      "default_popup": "index.html",
+      "default_title": "OMOcaptcha - Automatically solve captcha"
+   },
+   "background": {
+      "service_worker": "/contents/background_165.bundle.js"
+   },
+   "content_scripts": [ {
+      "all_frames": true,
+      "js": [ "/contents/funcaptcha-content.bundle.js" ],
+      "match_about_blank": false,
+      "matches": [ "*://*.arkoselabs.com/fc/*", "*://*.funcaptcha.com/fc/*", "*://*.roblox.com/fc/*", "*://*.airbnb.com/fc/*", "*://*.adobe.com/fc/*", "*://*.digitalocean.com/fc/*", "*://*.payoneer.com/fc/*" ],
+      "run_at": "document_end"
+   }, {
+      "js": [ "/contents/tiktok-content.bundle.js", "/contents/geetest-content.bundle.js" ],
+      "matches": [ "*://*.tiktok.com/*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/zalo-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.zcaptcha.api.zaloapp.com/*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/shopee-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.shopee.vn/*", "*://*.shopee.sg/*", "*://*.shopee.com.my/*", "*://*.shopee.co.id/*", "*://*.shopee.co.th/*", "*://*.shopee.ph/*", "*://*.shopee.tw/*", "*://*.shopee.com.br/*", "*://*.shopee.com.mx/*", "*://*.shopee.com.co/*", "*://*.shopee.com.cl/*", "*://*.shopee.com.ar/*", "*://*.shopee.com/*", "*://*.shopee.cl/*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/recaptchav2-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.google.com/recaptcha*", "*://*.recaptcha.net/recaptcha*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "exclude_matches": [ "*://*.arkoselabs.com/fc/*", "*://*.funcaptcha.com/fc/*", "*://*.roblox.com/fc/*", "*://*.airbnb.com/fc/*", "*://*.omocaptcha.com/*", "*://*.zcaptcha.api.zaloapp.com/*", "*://*.google.com/recaptcha*", "*://*.recaptcha.net/recaptcha*", "*://*.garena.com/*", "*://*.captcha-delivery.com/*", "*://*.hcaptcha.com/captcha/*", "*://*.uvfuns.com/*", "*://*.klingai.com/*", "*://nopecha.com/*", "*://*.riotgames.com/*", "*://*.discord.com/*", "*://*.shopee.vn/*", "*://*.shopee.sg/*", "*://*.shopee.com.my/*", "*://*.shopee.co.id/*", "*://*.shopee.co.th/*", "*://*.shopee.ph/*", "*://*.shopee.tw/*", "*://*.shopee.com.br/*", "*://*.shopee.com.mx/*", "*://*.shopee.com.co/*", "*://*.shopee.com.cl/*", "*://*.shopee.com.ar/*", "*://*.shopee.com/*", "*://*.shopee.cl/*", "*://*.gtimg.com/*", "*://*.qcloud.com/*", "*://*.tencentcloudcs.com/*", "*://*.live.com/*", "*://*.microsoft.com/*", "*://*.microsoftonline.com/*", "*://*.hsprotect.net/*" ],
+      "js": [ "/contents/amzn-content.bundle.js", "/contents/geetest-content.bundle.js", "/contents/image-to-text-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/slide-all-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.captcha-delivery.com/*", "*://*.garena.com/*", "*://*.coresky.com/*", "*://*.uvfuns.com/*", "*://*.coinmarketcap.com/*", "*://*.pixelheroes.io/*", "*://*.titannet.info/*", "*://*.mail.com/*", "*://*.travala.com/*", "*://*.proton.me/captcha/*", "*://*.jtexpress.vn/*", "*://*.owlproxy.com/*", "*://*.gxtexchange.com/*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/main-frame-content.bundle.js" ],
+      "matches": [ "\u003Call_urls>" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/hcaptcha-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.hcaptcha.com/captcha/*", "*://*.tiktok.com/*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/discord-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.discord.com/*", "*://*.discordapp.com/*", "*://*.discordapp.net/*" ],
+      "run_at": "document_end"
+   }, {
+      "all_frames": true,
+      "js": [ "/contents/tencent-content.bundle.js" ],
+      "match_about_blank": true,
+      "matches": [ "*://*.gtimg.com/*", "*://*.qcloud.com/*", "*://*.tencentcloudcs.com/*" ],
+      "run_at": "document_end"
+   } ],
+   "content_security_policy": {
+      "extension_pages": "script-src 'self'; object-src 'self'"
+   },
+   "description": "OMOcaptcha: Auto solve captcha",
+   "host_permissions": [ "\u003Call_urls>" ],
+   "icons": {
+      "128": "/icons/favicon128.png",
+      "16": "/icons/favicon16.png",
+      "48": "/icons/favicon48.png"
+   },
+   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwpZkrkIN2xWya0sgfH8x4Qb+eVvuIW3RekhEsTeCjHIBGDch3313gW/figwgv/T7g16PDuehO4x19cpg62yDcpwTv+V3sNhY4N72+Sy8I9JeYWNjakJ00m23YiZwM37CRbVEBGeQO3xGhrCLxH7Q085UNORRp+spZUo9HwUu9H6PQqKT6bpWdZ82njumA2g1D2mcNxNgjrh3nS96vvAWcNA5cUwXKy9W6zhDD/sFDENveRStcCOihz1SyC6d7gixG+vbbnP6/UV6gr0m+UOBh/IEKZOMjyuRQTu9l1i90DueqPuyK0npsdQww0S249AxzfbtQuggitQqZ6qFrxBPxQIDAQAB",
+   "manifest_version": 3,
+   "name": "OMOcaptcha: Auto solve captcha",
+   "permissions": [ "alarms", "declarativeNetRequest", "storage", "tabs", "webNavigation" ],
+   "update_url": "https://clients2.google.com/service/update2/crx",
+   "version": "1.7.8",
+   "web_accessible_resources": [ {
+      "matches": [ "\u003Call_urls>" ],
+      "resources": [ "configs.json" ]
+   } ]
+}

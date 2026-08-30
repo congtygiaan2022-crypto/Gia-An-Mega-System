@@ -72,7 +72,7 @@ def find_continue_button(page):
     return None
 
 def p_log(profile_name, msg):
-    print(msg)
+    print(msg, flush=True)
     try:
         db_manager.log_msg(profile_name, msg)
     except Exception:
@@ -116,11 +116,22 @@ def main(profile_name):
                 
             sleep_with_countdown(profile_name, 2, "tạo email")
             
-            # Lấy email đã tạo
+            # Lấy email đã tạo (ghép username + domain từ 365gmail)
             email = ""
             for attempt in range(10):
-                email = page_mail.locator('#credentials').input_value().strip()
-                if email and "@" in email:
+                username = page_mail.locator('#credentials').input_value().strip()
+                if username:
+                    domain = "365gmail.com"
+                    try:
+                        domain_el = page_mail.locator('#mail-domain')
+                        if domain_el.count() > 0:
+                            domain = domain_el.input_value().strip() or "365gmail.com"
+                    except:
+                        pass
+                    if "@" in username:
+                        email = username
+                    else:
+                        email = f"{username}@{domain}"
                     break
                 time.sleep(1)
                 
@@ -128,6 +139,11 @@ def main(profile_name):
                 p_log(profile_name, f"[{profile_name}] ❌ Không thể tạo email ngẫu nhiên từ 365gmail.com!")
                 context.close()
                 return
+                
+            try:
+                page_mail.locator('#email-form button[type="submit"]').click()
+            except:
+                pass
                 
             p_log(profile_name, f"[{profile_name}] ✅ Tạo thành công email: {email}")
             
@@ -179,9 +195,18 @@ def main(profile_name):
                 
             sleep_with_countdown(profile_name, 5, "tải trang đăng ký")
             
-            # Chờ ô nhập email xuất hiện
+            # Chờ ô nhập email xuất hiện (hỗ trợ chờ Cloudflare Turnstile)
             email_input = None
-            for _ in range(30):
+            cf_logged = False
+            for attempt in range(60):
+                # Kiểm tra xem có vướng Cloudflare không
+                try:
+                    if not cf_logged and (page_gpt.locator('text="Performing security verification"').count() > 0 or page_gpt.locator('text="verifies you are not a bot"').count() > 0 or page_gpt.locator('text="Cloudflare"').count() > 0):
+                        p_log(profile_name, f"[{profile_name}] 🛡️ Phát hiện màn hình xác minh an ninh Cloudflare! Đang chờ tự động/thủ công vượt qua...")
+                        cf_logged = True
+                except:
+                    pass
+
                 for sel in ['input[type="email"]', 'input#email', 'input[name="email"]', 'input[name="username"]']:
                     try:
                         loc = page_gpt.locator(sel).first
@@ -195,8 +220,8 @@ def main(profile_name):
                 time.sleep(1)
                 
             if not email_input:
-                p_log(profile_name, f"[{profile_name}] ❌ Không tìm thấy ô nhập email trên trang đăng ký!")
-                p_log(profile_name, f"[{profile_name}] Vui lòng tự tương tác trên trình duyệt. Tiến trình sẽ chờ...")
+                p_log(profile_name, f"[{profile_name}] ❌ Không tìm thấy ô nhập email trên trang đăng ký (Có thể bị kẹt Cloudflare).")
+                p_log(profile_name, f"[{profile_name}] Vui lòng tự tương tác giải CAPTCHA trên trình duyệt...")
                 email_input = page_gpt.locator('input[type="email"], input#email, input[name="username"]').first
                 try:
                     email_input.wait_for(timeout=60000)
@@ -204,26 +229,29 @@ def main(profile_name):
                     pass
             
             if email_input:
-                email_input.fill(email)
-                time.sleep(1)
-                
-                # Bấm Continue
                 try:
-                    continue_btn = find_continue_button(page_gpt)
-                    if continue_btn:
-                        continue_btn.click()
-                        p_log(profile_name, f"[{profile_name}] Đã điền email và bấm Tiếp tục.")
+                    if email_input.count() > 0 and email_input.is_visible():
+                        email_input.fill(email)
+                        time.sleep(1)
+                        
+                        # Bấm Continue
+                        continue_btn = find_continue_button(page_gpt)
+                        if continue_btn:
+                            continue_btn.click()
+                            p_log(profile_name, f"[{profile_name}] Đã điền email và bấm Tiếp tục.")
+                        else:
+                            p_log(profile_name, f"[{profile_name}] Warning: Không tìm thấy nút Tiếp tục email, thử nhấn Enter.")
+                            page_gpt.keyboard.press("Enter")
                     else:
-                        p_log(profile_name, f"[{profile_name}] Warning: Không tìm thấy nút Tiếp tục email, thử nhấn Enter.")
-                        page_gpt.keyboard.press("Enter")
+                        p_log(profile_name, f"[{profile_name}] Warning: Ô nhập email không còn hiển thị.")
                 except Exception as e:
-                    p_log(profile_name, f"[{profile_name}] Lỗi click nút Tiếp tục: {e}")
+                    p_log(profile_name, f"[{profile_name}] Lỗi click/điền email: {e}")
                     
             sleep_with_countdown(profile_name, 3, "tải ô nhập mật khẩu")
             
             # Chờ và nhập mật khẩu
             password_input = None
-            for _ in range(15):
+            for _ in range(45):
                 for sel in ['input[type="password"]', 'input#password', 'input[name="password"]']:
                     try:
                         loc = page_gpt.locator(sel).first
@@ -297,33 +325,58 @@ def main(profile_name):
             else:
                 p_log(profile_name, f"[{profile_name}] Đã phát hiện ô nhập mã xác minh. Tiến hành kiểm tra hòm thư...")
                 
-                # Poll kiểm tra email từ 365gmail.com
+                # Poll kiểm tra email từ 365gmail.com (không click submit form để tránh đổi email)
                 code = None
-                for check_attempt in range(24): # Kiểm tra mỗi 5s, tổng cộng 2 phút
+                for check_attempt in range(30): # Kiểm tra mỗi 3s, tổng cộng 90 giây
                     try:
-                        page_mail.locator('#email-form button[type="submit"]').click()
-                        time.sleep(3)
-                        
-                        li_elements = page_mail.locator('#email-list li').all()
-                        for li in li_elements:
-                            text = li.inner_text()
-                            if "openai" in text.lower() or "chatgpt" in text.lower() or "verification" in text.lower() or "verify" in text.lower() or "code" in text.lower() or "xác minh" in text.lower():
-                                li.click()
-                                time.sleep(2)
-                                
-                                content = page_mail.locator('#email-content').inner_text()
-                                matches = re.findall(r'\b\d{6}\b', content)
+                        # Cách 1: Đọc biến JS window.lastMailData trực tiếp từ 365gmail
+                        try:
+                            mails = page_mail.evaluate("() => window.lastMailData || []")
+                            if mails:
+                                for m in mails:
+                                    full_text = f"{m.get('subject', '')} {m.get('message', '')} {m.get('text', '')}"
+                                    matches = re.findall(r'\b\d{6}\b', full_text)
+                                    if matches:
+                                        code = matches[0]
+                                        break
+                        except Exception:
+                            pass
+                            
+                        # Cách 2: Duyệt danh sách thẻ li trong email-list
+                        if not code:
+                            li_elements = page_mail.locator('#email-list li').all()
+                            for li in li_elements:
+                                text = li.inner_text()
+                                matches = re.findall(r'\b\d{6}\b', text)
                                 if matches:
                                     code = matches[0]
-                                    p_log(profile_name, f"[{profile_name}] 📬 Tìm thấy mã xác minh OpenAI: {code}")
                                     break
+                                try:
+                                    li.click()
+                                    time.sleep(1)
+                                except:
+                                    pass
+
+                        # Cách 3: Quét iframe hoặc body content trên page_mail
+                        if not code:
+                            for frame in page_mail.frames:
+                                try:
+                                    frame_text = frame.locator('body').inner_text()
+                                    matches = re.findall(r'\b\d{6}\b', frame_text)
+                                    if matches:
+                                        code = matches[0]
+                                        break
+                                except:
+                                    pass
+
                     except Exception as e:
                         pass
                         
                     if code:
+                        p_log(profile_name, f"[{profile_name}] 📬 Tìm thấy mã xác minh OpenAI: {code}")
                         break
-                    p_log(profile_name, f"[{profile_name}] Chưa thấy mail xác minh, đang thử lại... (lượt {check_attempt+1}/24)")
-                    time.sleep(2)
+                    p_log(profile_name, f"[{profile_name}] Chưa thấy mail xác minh, đang thử lại... (lượt {check_attempt+1}/30)")
+                    time.sleep(3)
                     
                 if code:
                     page_gpt.bring_to_front()
@@ -483,8 +536,11 @@ def main(profile_name):
                 
             # --- Bỏ qua popup chào mừng ---
             p_log(profile_name, f"[{profile_name}] Đang kiểm tra và đóng các hộp thoại chào mừng/hướng dẫn...")
-            page_gpt.bring_to_front()
-            sleep_with_countdown(profile_name, 5, "tải các popup chào mừng")
+            try:
+                page_gpt.bring_to_front()
+                sleep_with_countdown(profile_name, 5, "tải các popup chào mừng")
+            except Exception:
+                pass
             
             for _ in range(15):
                 dismiss_selectors = [
@@ -552,21 +608,14 @@ def main(profile_name):
                 
             p_log(profile_name, f"\n[{profile_name}] 🎉🎉 HOÀN THÀNH TẠO VÀ ĐỔI TÀI KHOẢN GPT!")
             p_log(profile_name, f"[{profile_name}] File lưu trữ: {acc_file}")
-            p_log(profile_name, f"[{profile_name}] Bạn có thể kiểm tra và sử dụng ChatGPT ngay trên trình duyệt này.")
+            p_log(profile_name, f"[{profile_name}] ✅ Đã tạo và lưu phiên làm việc ChatGPT mới thành công!")
             
-            if "--auto" in sys.argv:
-                p_log(profile_name, f"[{profile_name}] Chạy ở chế độ tự động (Auto). Tự động đóng trình duyệt sau 3 giây...")
-                time.sleep(3)
-                try: context.close()
-                except: pass
-            else:
-                p_log(profile_name, f"[{profile_name}] [!] VUI LÒNG ĐÓNG CỬA SỔ TRÌNH DUYỆT NÀY KHI ĐÃ HOÀN TẤT THỦ CÔNG!")
-                try:
-                    page_gpt.wait_for_event("close", timeout=0)
-                except:
-                    pass
-                try: context.close()
-                except: pass
+            time.sleep(2)
+            try:
+                context.close()
+            except Exception:
+                pass
+            return True
             
     except Exception as e:
         import traceback

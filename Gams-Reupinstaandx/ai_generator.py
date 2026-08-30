@@ -1,4 +1,10 @@
 import os
+import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 import time
 import random
 from PIL import Image
@@ -149,7 +155,9 @@ class AIGenerator:
         try:
             sources_to_try = [ai_source]
 
-            output_image_path = os.path.join(output_img_dir, f"{profile_name}_{int(time.time())}.png")
+            import re
+            safe_name = re.sub(r'[\\/:*?"<>|]', '_', str(profile_name))
+            output_image_path = os.path.join(output_img_dir, f"{safe_name}_{int(time.time())}.png")
             generated_text = None
             errors = []
 
@@ -196,15 +204,26 @@ class AIGenerator:
                                 'button:has-text("Reload")',
                                 'button:has-text("Tải lại")',
                                 'text="Check your connection"',
-                                'text="Internal Server Error"'
+                                'text="Internal Server Error"',
+                                'text="limit of file uploads"',
+                                'text="limit for file uploads"',
+                                'text="reached our limit"',
+                                'text="reached your limit"',
+                                'text="free plan limit"',
+                                'text="limit resets"',
+                                'text="out of images"',
+                                'text="Image creation will be available"'
                             ]:
                                 try:
                                     if page.locator(err_selector).first.count() > 0:
                                         has_error = True
                                         print(f"[{profile_name}] Phát hiện lỗi ChatGPT hiển thị: '{err_selector}'")
+                                        if any(k in err_selector for k in ["limit of file uploads", "limit for file uploads", "reached our limit", "reached your limit", "free plan limit", "limit resets", "out of images", "Image creation"]):
+                                            raise Exception(f"CHATGPT_LIMIT_REACHED: ChatGPT đạt giới hạn lượt tạo ảnh/sử dụng: '{err_selector}'")
                                         break
-                                except:
-                                    pass
+                                except Exception as e_sel:
+                                    if "CHATGPT_LIMIT_REACHED" in str(e_sel):
+                                        raise e_sel
                                     
                             # Kiểm tra sự tồn tại của textarea
                             has_textarea = False
@@ -324,6 +343,10 @@ class AIGenerator:
                                             if raw_text:
                                                 # Check if response indicates login requirement
                                                 low_text = raw_text.lower()
+                                                if any(k in low_text for k in ["out of images", "image creation will be available", "usage resets after", "upgrade now for expanded access", "hit your limit for image", "image creation limit", "image creation is temporarily unavailable", "temporarily unavailable", "image creation is unavailable"]):
+                                                    msg = f"CHATGPT_LIMIT_REACHED: ChatGPT hết lượt tạo ảnh: {raw_text[:200]}"
+                                                    print(f"[{profile_name}] {msg}")
+                                                    raise Exception(msg)
                                                 if "please log in" in low_text or "please sign in" in low_text or "need to be logged in" in low_text or "log in to use" in low_text or "logged in to use" in low_text:
                                                     raise Exception(f"CHATGPT_NOT_LOGGED_IN: ChatGPT yêu cầu đăng nhập: {raw_text}")
                                                 
@@ -338,8 +361,7 @@ class AIGenerator:
                                                     last_text = raw_text
                                                     stable_count = 0
                                     except Exception as text_check_err:
-                                        if "ChatGPT chỉ trả về text" in str(text_check_err) or "CHATGPT_NOT_LOGGED_IN" in str(text_check_err):
-                                            raise text_check_err
+                                        raise text_check_err
                                             
                                     time.sleep(0.5)
                                     
@@ -738,7 +760,8 @@ class AIGenerator:
                 raise Exception(error_msg)
                 
             # --- Lưu dữ liệu Text ---
-            output_text_path = os.path.join(output_txt_dir, f"{profile_name}_{int(time.time())}.txt")
+            safe_name = re.sub(r'[\\/:*?"<>|]', '_', str(profile_name))
+            output_text_path = os.path.join(output_txt_dir, f"{safe_name}_{int(time.time())}.txt")
             with open(output_text_path, "w", encoding="utf-8") as f:
                 f.write(generated_text)
 

@@ -32,52 +32,12 @@ def get_totp_code(secret: str) -> str:
 
 def acquire_fb_lock(profile_name, lock_file="scratch/fb_posting.lock", timeout=600):
     """
-    Chờ và tạo file lock để độc quyền truy cập luồng đăng Facebook (tránh xung đột session của cùng 1 tài khoản).
+    Cho phép tất cả các profile chạy đăng bài song song đa luồng 100% không bị nghẽn khóa.
     """
-    os.makedirs("scratch", exist_ok=True)
-    start_time = time.time()
-    last_logged_time = 0
-    while time.time() - start_time < timeout:
-        try:
-            with open(lock_file, "x") as f:
-                f.write(profile_name)
-            p_log(profile_name, f"[{profile_name}] ✅ Đã lấy được Khóa Độc Quyền Đăng Facebook.")
-            return True
-        except FileExistsError:
-            try:
-                with open(lock_file, "r") as f:
-                    holder = f.read().strip()
-            except:
-                holder = "profile khác"
-            
-            now = time.time()
-            if now - last_logged_time >= 15:
-                p_log(profile_name, f"[{profile_name}] ⏳ Đang xếp hàng chờ đăng Facebook. Khóa đang được giữ bởi: {holder}...")
-                last_logged_time = now
-                
-            time.sleep(2)
-            
-            # Tự giải phóng nếu khóa quá cũ (tránh deadlock)
-            try:
-                mtime = os.path.getmtime(lock_file)
-                if time.time() - mtime > 240:
-                    os.remove(lock_file)
-                    p_log(profile_name, f"[{profile_name}] Warning: Phát hiện khóa cũ quá 4 phút, tự động giải phóng.")
-            except:
-                pass
-                
-    p_log(profile_name, f"[{profile_name}] ❌ Timeout chờ khóa đăng Facebook.")
-    return False
+    return True
 
 def release_fb_lock(lock_file="scratch/fb_posting.lock"):
-    """
-    Giải phóng khóa đăng Facebook.
-    """
-    try:
-        if os.path.exists(lock_file):
-            os.remove(lock_file)
-    except:
-        pass
+    pass
 
 def check_is_logged_in_playwright(page) -> bool:
     try:
@@ -394,7 +354,8 @@ def check_and_login_facebook_playwright(context, profile_name, fb_account_str) -
             
             try:
                 os.makedirs("scratch", exist_ok=True)
-                page.screenshot(path=f"scratch/fb_2fa_{profile_name}.png")
+                safe_pname = re.sub(r'[\\/:*?"<>|]', '_', str(profile_name))
+                page.screenshot(path=f"scratch/fb_2fa_{safe_pname}.png")
             except Exception:
                 pass
 
@@ -565,7 +526,8 @@ config = load_global_config()
 
 def cleanup_chrome(profile_name):
     profiles_dir = config.get("profiles_dir", "profiles")
-    abs_profile_dir = os.path.abspath(os.path.join(profiles_dir, profile_name)).lower()
+    safe_pname = re.sub(r'[\\/:*?"<>|]', '_', str(profile_name))
+    abs_profile_dir = os.path.abspath(os.path.join(profiles_dir, safe_pname)).lower()
     
     count = 0
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
@@ -574,7 +536,7 @@ def cleanup_chrome(profile_name):
                 cmdline = proc.info['cmdline']
                 if cmdline:
                     cmd_str = " ".join(cmdline).lower()
-                    if abs_profile_dir in cmd_str:
+                    if abs_profile_dir in cmd_str or (safe_pname and safe_pname.lower() in cmd_str):
                         proc.kill()
                         count += 1
         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
@@ -583,7 +545,7 @@ def cleanup_chrome(profile_name):
         db_manager.log_msg(profile_name, f"[{profile_name}] Da don dep {count} Chrome bi ket.")
 
 def p_log(profile_name, msg):
-    print(msg)
+    print(msg, flush=True)
     db_manager.log_msg(profile_name, msg)
 
 def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, bypass_ai=False):
@@ -891,22 +853,50 @@ def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, 
                 p_log(profile_name, f"[{profile_name}] Caption goc: '{caption[:100]}...'")
                 p_log(profile_name, f"[{profile_name}] Loai media: {media_type}")
                 
+                # === LỌC THEO ĐỊNH DẠNG MEDIA ĐƯỢC PHÉP REUP CỦA PROFILE ===
+                reup_filter = config.get("reup_media_type", "all").lower()
+                if reup_filter != "all":
+                    if reup_filter == "status" and media_type not in ["status", "text", "none"]:
+                        p_log(profile_name, f"[{profile_name}] ⏭️ Bỏ qua bài {post_id} vì Profile chỉ chọn 'Chỉ Reup Status' (Bài hiện tại: {media_type}).")
+                        continue
+                    elif reup_filter == "image" and media_type != "image":
+                        p_log(profile_name, f"[{profile_name}] ⏭️ Bỏ qua bài {post_id} vì Profile chỉ chọn 'Chỉ Reup 1 Ảnh' (Bài hiện tại: {media_type}).")
+                        continue
+                    elif reup_filter == "multi_image" and media_type != "multi_image":
+                        p_log(profile_name, f"[{profile_name}] ⏭️ Bỏ qua bài {post_id} vì Profile chỉ chọn 'Chỉ Reup Nhiều Ảnh' (Bài hiện tại: {media_type}).")
+                        continue
+                    elif reup_filter == "video" and media_type != "video":
+                        p_log(profile_name, f"[{profile_name}] ⏭️ Bỏ qua bài {post_id} vì Profile chỉ chọn 'Chỉ Reup Video' (Bài hiện tại: {media_type}).")
+                        continue
+
+                # Tự động bỏ qua GPT đối với bài viết nhiều ảnh (multi_image)
+                effective_bypass_ai = bypass_ai
+                if media_type == "multi_image":
+                    p_log(profile_name, f"[{profile_name}] ⚡ [NHIỀU ẢNH / CAROUSEL] Phát hiện bài viết có nhiều ảnh -> Tự động BỎ QUA GPT để giữ 100% trọn bộ ảnh gốc.")
+                    effective_bypass_ai = True
+                
                 # Download media
                 temp_media_path = None
-                if media_type != "text" and media_url:
+                if media_type not in ["status", "text", "none"] and media_url:
                     ext = "mp4" if media_type == "video" else "png"
                     temp_filename = f"temp_{platform}_{post_id}.{ext}"
-                    temp_media_path = os.path.abspath(os.path.join(input_img_dir, temp_filename))
+                    target_media_path = os.path.abspath(os.path.join(input_img_dir, temp_filename))
                     
-                    success = scraper.download_media_file(page, media_url, temp_media_path, media_type, post_url)
-                    if not success:
+                    download_res = scraper.download_media_file(page, media_url, target_media_path, media_type, post_url)
+                    if not download_res:
                         p_log(profile_name, f"[{profile_name}] Tai file media that bai. Bo qua.")
                         continue
-                    p_log(profile_name, f"[{profile_name}] Da tai file media goc ve: {temp_media_path}")
+                    if isinstance(download_res, list):
+                        temp_media_path = download_res
+                        p_log(profile_name, f"[{profile_name}] Da tai {len(temp_media_path)} file media goc ve: {temp_media_path}")
+                    else:
+                        temp_media_path = target_media_path
+                        p_log(profile_name, f"[{profile_name}] Da tai file media goc ve: {temp_media_path}")
                 
                 # === LOC TRUNG NOI DUNG ===
                 try:
-                    new_fp = content_deduplicator.compute_fingerprints(caption, temp_media_path, media_type)
+                    fp_media_check = temp_media_path[0] if isinstance(temp_media_path, list) else temp_media_path
+                    new_fp = content_deduplicator.compute_fingerprints(caption, fp_media_check, media_type)
                     existing_fps = db_manager.get_content_fingerprints(profile_name, limit=300)
                     is_dup, dup_reason = content_deduplicator.is_duplicate(new_fp, existing_fps)
                     if is_dup:
@@ -914,9 +904,12 @@ def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, 
                             p_log(profile_name, f"[{profile_name}] ⚠️ SKIP: Bai viet {post_id} bi loc trung - {dup_reason}. Danh dau da xu ly.")
                             db_manager.mark_post_processed(profile_name, platform, post_id)
                             # Don dep file tam neu co
-                            if temp_media_path and os.path.exists(temp_media_path):
-                                try: os.remove(temp_media_path)
-                                except: pass
+                            if temp_media_path:
+                                paths_to_del = temp_media_path if isinstance(temp_media_path, list) else [temp_media_path]
+                                for p in paths_to_del:
+                                    if os.path.exists(p):
+                                        try: os.remove(p)
+                                        except: pass
                             continue
                         else:
                             p_log(profile_name, f"[{profile_name}] ℹ️ Bài viết {post_id} bị trùng lặp ({dup_reason}) nhưng bỏ qua kiểm tra vì chạy thủ công (Đăng thẳng).")
@@ -937,12 +930,13 @@ def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, 
                     prompt_base_full = f"Day la bai dang [{platform.upper()}] khong co chu thich (chi co media).\n\nYeu cau: {prompt_base}"
 
                 
-                if only_scrape or bypass_ai:
-                    txt_path = os.path.join(output_txt_dir, f"{profile_name}_{int(time.time())}.txt")
+                if only_scrape or effective_bypass_ai:
+                    safe_pname = re.sub(r'[\\/:*?"<>|]', '_', str(profile_name))
+                    txt_path = os.path.join(output_txt_dir, f"{safe_pname}_{int(time.time())}.txt")
                     with open(txt_path, "w", encoding="utf-8") as f:
                         f.write(caption or "")
                     img_path = temp_media_path
-                    if bypass_ai:
+                    if effective_bypass_ai:
                         p_log(profile_name, f"[{profile_name}] ⚡ [BYPASS AI] Đăng reup không qua AI. Dùng caption và media gốc 100%.")
                     else:
                         p_log(profile_name, f"[{profile_name}] 🧪 [TEST MODE] Bỏ qua AI. Dùng caption và media gốc để lưu fingerprint.")
@@ -1003,7 +997,7 @@ def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, 
                                     break
                             else:
                                 p_log(profile_name, f"[{profile_name}] ⚠️ Lỗi xử lý AI (Lần {ai_attempts}/{max_ai_attempts}): {ai_err}")
-                                if "free plan limit" in err_str.lower() or "limit resets" in err_str.lower():
+                                if any(k in err_str.lower() for k in ["free plan limit", "limit resets", "limit of file uploads", "limit for file uploads", "reached our limit", "reached your limit", "hit the limit", "chatgpt_limit_reached", "out of images", "image creation will be available", "usage resets after", "temporarily unavailable"]):
                                     # Lỗi hết hạn GPT thì raise luôn để thoát tiến trình và chờ đợi lâu theo thiết lập
                                     raise ai_err
                                     
@@ -1106,7 +1100,7 @@ def main(profile_name, current_loop, manual_platform=None, manual_post_id=None, 
             context.close()
     except Exception as e:
         err_msg = str(e)
-        if "free plan limit" in err_msg.lower() or "limit resets" in err_msg.lower():
+        if any(k in err_msg.lower() for k in ["free plan limit", "limit resets", "limit of file uploads", "limit for file uploads", "reached our limit", "reached your limit", "hit the limit", "chatgpt_limit_reached", "out of images", "image creation will be available", "usage resets after", "temporarily unavailable"]):
             search_area = err_msg
             match_resets = re.search(r'resets?\s+in\s+(.*)', err_msg, re.IGNORECASE)
             if match_resets:

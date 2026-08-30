@@ -1,5 +1,13 @@
 import sqlite3
 import json
+import os
+import re
+import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 from datetime import datetime
 
 DB_FILE = "database.db"
@@ -302,13 +310,13 @@ def get_profile_config(profile_name):
         is_new_or_empty = True
 
     # Tìm thư mục cơ sở mặc định (Ưu tiên E:\Download\SoftAI)
-    import os
     base_dir = r"E:\Download\SoftAI"
     if not os.path.exists(base_dir):
-        # Fallback về thư mục dự án hiện tại
         base_dir = os.path.dirname(os.path.abspath(__file__))
 
-    profile_base = os.path.join(base_dir, "reup_data", profile_name)
+    import re
+    safe_profile_name = re.sub(r'[\\/:*?"<>|]', '', str(profile_name))
+    profile_base = os.path.join(base_dir, "reup_data", safe_profile_name)
 
     # Kiểm tra các folder, nếu rỗng thì điền mặc định và tạo thư mục
     updated = False
@@ -323,6 +331,10 @@ def get_profile_config(profile_name):
         
     if not config.get("output_img_dir"):
         config["output_img_dir"] = os.path.join(profile_base, "output_images")
+        updated = True
+
+    if not config.get("reup_media_type"):
+        config["reup_media_type"] = "all"
         updated = True
 
     # Nếu có cập nhật, tự động lưu lại vào DB và tạo folder thực tế

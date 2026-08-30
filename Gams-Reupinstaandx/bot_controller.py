@@ -238,8 +238,34 @@ class BotController:
                                         state["error_detail"] = "Lỗi tạm thời (Thử lại sau 10s)"
                                     continue
                                     
-                                # Nếu ret_code == 3 -> Hết hạn hạn mức GPT, nghỉ theo delay cấu hình rồi thử lại loop hiện tại
+                                # Nếu ret_code == 3 -> Hết hạn hạn mức GPT
                                 if ret_code == 3:
+                                    p_cfg = db_manager.get_profile_config(p)
+                                    action = p_cfg.get("gpt_limit_action")
+                                    if not action or action == "default":
+                                        action = global_cfg.get("gpt_limit_action", "wait_limit")
+                                        
+                                    if action == "change_account":
+                                        db_manager.log_msg(p, f"[{p}] ⚡ Phát hiện hết hạn ngạch GPT. Chế độ 'Đổi tài khoản tự động' đang được kích hoạt...")
+                                        state["status"] = "CHANGING_GPT"
+                                        state["error_detail"] = "Đang tạo/đổi tài khoản GPT..."
+                                        try:
+                                            res = subprocess.run(
+                                                [sys.executable, "gpt_register.py", p],
+                                                cwd=os.getcwd(),
+                                                capture_output=True,
+                                                text=True,
+                                                encoding="utf-8"
+                                            )
+                                            if res.returncode == 0:
+                                                db_manager.log_msg(p, f"[{p}] ✅ Đã đổi tài khoản ChatGPT tự động thành công! Thử lại tiến trình ngay...")
+                                                state["next_run_time"] = time.time() + 3
+                                                continue
+                                            else:
+                                                db_manager.log_msg(p, f"[{p}] ❌ Đổi tài khoản ChatGPT tự động thất bại. Chuyển sang chế độ nghỉ delay.")
+                                        except Exception as change_err:
+                                            db_manager.log_msg(p, f"[{p}] Lỗi khi chạy gpt_register: {change_err}")
+                                            
                                     state["status"] = "DELAYING"
                                     state["error_detail"] = "Chờ thử lại (Hết hạn GPT)"
                                     

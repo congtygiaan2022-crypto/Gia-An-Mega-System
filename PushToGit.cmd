@@ -4,6 +4,11 @@ echo ===================================================
 echo     GAMS GIT PUSH HELPER (E DRIVE ROOT)
 echo ===================================================
 echo.
+echo Configuring Git safe directory...
+git config --global --add safe.directory * >nul 2>&1
+git config --global --add safe.directory E:/ >nul 2>&1
+git config --global --add safe.directory "E:" >nul 2>&1
+
 echo Checking Git status...
 git init 2>nul
 git branch -M main 2>nul

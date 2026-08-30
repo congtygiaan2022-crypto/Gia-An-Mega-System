@@ -277,6 +277,18 @@
 
                             <label>Giờ quét bài viết mới (Scan Times - ví dụ: 08:00, 12:00, 18:00):</label>
                             <input type="text" id="set_scan_times" placeholder="08:00, 12:00, 18:00" style="width: 100%; box-sizing: border-box;">
+
+                            <label style="font-weight: bold; color: #38bdf8; margin-top: 1.25rem; display: block;">📌 Lọc loại bài viết cần Reup (Reup Media Filter):</label>
+                            <select id="set_reup_media_type" style="width: 100%; box-sizing: border-box; padding: 0.6rem; border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); margin-bottom: 0.5rem; font-size: 0.9rem;">
+                                <option value="all">🌐 Tất cả các loại bài (Default: Status, 1 Ảnh, Nhiều Ảnh, Video)</option>
+                                <option value="status">📝 Chỉ Reup Status (Bài viết chỉ có chữ/văn bản)</option>
+                                <option value="image">🖼️ Chỉ Reup 1 Ảnh (Bài viết đơn ảnh)</option>
+                                <option value="multi_image">🖼️🖼️ Chỉ Reup Nhiều Ảnh (Bài viết Carousel/Nhiều ảnh)</option>
+                                <option value="video">🎬 Chỉ Reup Video (Bài viết Video/Reel)</option>
+                            </select>
+                            <p style="font-size: 0.82rem; color: #f59e0b; margin-bottom: 1.25rem; line-height: 1.4; background: rgba(245, 158, 11, 0.08); padding: 8px 12px; border-radius: 6px; border-left: 3px solid #f59e0b;">
+                                💡 <strong>Ghi chú quan trọng:</strong> Nếu chọn <em>"Chỉ Reup Nhiều Ảnh"</em> hoặc khi hệ thống phát hiện bài viết có nhiều ảnh (Carousel), kịch bản sẽ tự động tải về <strong>tất cả các ảnh gốc</strong> và đăng trực tiếp lên Fanpage <strong>mà không cần qua GPT xử lý</strong> (bỏ qua GPT để đảm bảo giữ nguyên trọn bộ ảnh gốc).
+                            </p>
                         </div>
                     </div>
 

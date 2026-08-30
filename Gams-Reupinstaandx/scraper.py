@@ -6,6 +6,11 @@ import urllib.request
 import traceback
 import subprocess
 import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 import db_manager
 
 def p_log(profile_name, msg):
@@ -240,6 +245,7 @@ def scrape_instagram_post(page, post_url, profile_name="System"):
             if not media_url:
                 try:
                     img_locs = article_loc.locator('img').all()
+                    valid_imgs = []
                     for img in img_locs:
                         src = img.get_attribute("src")
                         alt = img.get_attribute("alt") or ""
@@ -257,11 +263,21 @@ def scrape_instagram_post(page, post_url, profile_name="System"):
                                     continue
                             except Exception:
                                 pass
-                            
-                            media_url = src
-                            media_type = "image"
-                            p_log(profile_name, "Phát hiện bài viết dạng Ảnh trong article.")
-                            break
+                            if src not in valid_imgs:
+                                valid_imgs.append(src)
+                                
+                    if len(valid_imgs) > 1:
+                        media_type = "multi_image"
+                        media_url = valid_imgs
+                        p_log(profile_name, f"Phát hiện bài viết Carousel/Nhiều Ảnh ({len(valid_imgs)} ảnh) trong article.")
+                    elif len(valid_imgs) == 1:
+                        media_type = "image"
+                        media_url = valid_imgs[0]
+                        p_log(profile_name, "Phát hiện bài viết dạng 1 Ảnh trong article.")
+                    else:
+                        media_type = "status"
+                        media_url = ""
+                        p_log(profile_name, "Phát hiện bài viết dạng STATUS (văn bản chỉ có chữ).")
                 except Exception as img_err:
                     p_log(profile_name, f"Lỗi quét ảnh: {img_err}")
         else:
@@ -595,6 +611,21 @@ def download_media_file(page, media_url, output_path, media_type="image", post_u
         except Exception as ce:
             p_log(profile_name, f"Không thể xuất file cookie cho yt-dlp: {ce}")
             cookies_path = None
+
+    # 0. Hỗ trợ bài viết nhiều ảnh (Carousel / Multi-Image)
+    if media_type == "multi_image" or isinstance(media_url, list):
+        urls = media_url if isinstance(media_url, list) else [media_url]
+        downloaded_paths = []
+        base_no_ext, ext = os.path.splitext(output_path)
+        for idx, u in enumerate(urls):
+            cur_path = f"{base_no_ext}_{idx+1}{ext}"
+            p_log(profile_name, f"Đang tải ảnh {idx+1}/{len(urls)} của bài viết Carousel/Nhiều ảnh...")
+            if download_file_direct(u, cur_path) or (page and download_file_in_browser(page, u, cur_path)):
+                downloaded_paths.append(cur_path)
+        if downloaded_paths:
+            p_log(profile_name, f"✅ Đã tải thành công {len(downloaded_paths)}/{len(urls)} ảnh từ bài viết nhiều ảnh.")
+            return downloaded_paths
+        return False
 
     # 1. Nếu là video trên X (hoặc video Instagram mà không có link trực tiếp) -> dùng yt-dlp
     if media_type == "video" and post_url:

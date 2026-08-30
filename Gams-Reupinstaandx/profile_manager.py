@@ -7,7 +7,9 @@ class ProfileManager:
         self.profiles_dir = profiles_dir
 
     def get_profile_dir(self, profile_name):
-        path = os.path.join(self.profiles_dir, profile_name)
+        import re
+        safe_profile_name = re.sub(r'[\\/:*?"<>|]', '_', str(profile_name))
+        path = os.path.join(self.profiles_dir, safe_profile_name)
         abs_path = os.path.abspath(path)
         os.makedirs(abs_path, exist_ok=True)
         return abs_path

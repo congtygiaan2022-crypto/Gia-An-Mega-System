@@ -1,4 +1,10 @@
 import os
+import sys
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    pass
 import time
 from core.bug_tracker import track_errors
 import db_manager
@@ -127,8 +133,14 @@ class SocialPoster:
             # Tải file lên (ảnh hoặc video)
             upload_success = False
             
+            # --- CÁCH 0: Đăng bài STATUS (Text-only không có media) ---
+            if not image_path:
+                upload_success = True
+                p_log(profile_name, f"[{profile_name}] 📝 Đăng bài dạng STATUS (Chỉ có chữ/văn bản). Bỏ qua bước upload media.")
+
             # --- CÁCH 1: Tìm và set files trực tiếp lên input file hiện có ---
-            p_log(profile_name, f"[{profile_name}] Thử tìm input[type=file] có sẵn...")
+            if not upload_success:
+                p_log(profile_name, f"[{profile_name}] Thử tìm input[type=file] có sẵn...")
             for frame in [page] + page.frames:
                 try:
                     file_inputs = frame.locator('input[type="file"]').all()
@@ -276,11 +288,13 @@ class SocialPoster:
             
             # Ghi Text va Bam dang (Phan biet anh & video)
             is_video = False
-            if image_path:
+            if image_path and isinstance(image_path, str):
                 ext = os.path.splitext(image_path)[1].lower()
                 if ext in ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv']:
                     is_video = True
                     p_log(profile_name, f"[{profile_name}] Phat hien file dang la VIDEO ({ext}). Ap dung luong dang video rieng.")
+            elif image_path and isinstance(image_path, list):
+                p_log(profile_name, f"[{profile_name}] 🖼️🖼️ Đang tải lên {len(image_path)} ảnh bài viết Carousel/Nhiều Ảnh.")
 
             if is_video:
                 # === LUỒNG ĐĂNG VIDEO ===
@@ -540,6 +554,80 @@ class SocialPoster:
                     p_log(profile_name, f"[{profile_name}] Lỗi nhập text FB: {e}")
                     raise Exception(f"Không thể gõ text trạng thái lên FB: {e}")
                     
+                # === THÊM BACKGROUND CHO BÀI VIẾT STATUS (TEXT-ONLY) ===
+                if not image_path:
+                    try:
+                        p_log(profile_name, f"[{profile_name}] 🎨 Bài viết dạng Status (chỉ có chữ). Đang tìm và chọn ngẫu nhiên phông nền/background Facebook...")
+                        time.sleep(1.5)
+                        
+                        # 1. Thử click nút bật phông nền (nếu chưa hiển thị bảng màu)
+                        bg_toggle_locators = [
+                            'div[aria-label*="phông nền"]',
+                            'div[aria-label*="Phông nền"]',
+                            'div[aria-label*="background"]',
+                            'div[aria-label*="Background"]',
+                            'div[aria-label*="Tạo bài viết có phông nền"]',
+                            'div[aria-label*="Chọn phông nền"]',
+                            'img[src*="background"]',
+                            'div[role="button"]:has-text("Phông nền")',
+                            'div[role="button"]:has-text("Background")'
+                        ]
+                        
+                        bg_toggle_btn = None
+                        for frame in [page] + page.frames:
+                            for sel in bg_toggle_locators:
+                                try:
+                                    loc = frame.locator(sel).first
+                                    if loc.count() > 0 and loc.is_visible():
+                                        bg_toggle_btn = loc
+                                        break
+                                except: pass
+                            if bg_toggle_btn: break
+                            
+                        if bg_toggle_btn:
+                            try:
+                                bg_toggle_btn.click(force=True)
+                                p_log(profile_name, f"[{profile_name}] Đã click nút mở bảng phông nền/background.")
+                                time.sleep(1.5)
+                            except Exception as toggle_err:
+                                p_log(profile_name, f"[{profile_name}] Warning: Lỗi click toggle background: {toggle_err}")
+
+                        # 2. Tìm danh sách các ô màu/phông nền có sẵn
+                        bg_swatch_selectors = [
+                            'div[aria-label*="Phông nền"] div[role="button"]',
+                            'div[aria-label*="background"] div[role="button"]',
+                            'div[aria-label*="Background"] div[role="button"]',
+                            'div[aria-label*="phông nền"] div[role="button"]',
+                            'div[style*="background-image"][role="button"]',
+                            'div[style*="background-color"][role="button"]',
+                            'div[role="button"][aria-label*="mẫu"]',
+                            'div[role="button"][aria-label*="Color"]'
+                        ]
+                        
+                        available_bgs = []
+                        for frame in [page] + page.frames:
+                            for sel in bg_swatch_selectors:
+                                try:
+                                    locs = frame.locator(sel).all()
+                                    for loc in locs:
+                                        if loc.is_visible():
+                                            available_bgs.append(loc)
+                                except: pass
+                            if available_bgs: break
+                            
+                        if available_bgs:
+                            import random
+                            chosen_bg = random.choice(available_bgs)
+                            try:
+                                chosen_bg.click(force=True)
+                                p_log(profile_name, f"[{profile_name}] ✅ 🎨 Đã chọn thành công 1 phông nền/background ngẫu nhiên cho bài Status!")
+                            except Exception as click_bg_err:
+                                p_log(profile_name, f"[{profile_name}] Warning: Lỗi click chọn ô phông nền: {click_bg_err}")
+                        else:
+                            p_log(profile_name, f"[{profile_name}] Warning: Không tìm thấy ô màu phông nền/background khả dụng trên giao diện.")
+                    except Exception as bg_err:
+                        p_log(profile_name, f"[{profile_name}] Warning: Lỗi xử lý chọn background bài Status: {bg_err}")
+
                 time.sleep(5)
                 
                 # Bấm nút Đăng

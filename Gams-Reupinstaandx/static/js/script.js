@@ -414,6 +414,9 @@ async function openSettings(profile) {
         document.getElementById('set_threads_urls').value = (config.threads_urls || []).join('\n');
         document.getElementById('set_scan_times').value = config.scan_times || '';
         document.getElementById('set_scan_limit').value = config.scan_limit || 10;
+        if (document.getElementById('set_reup_media_type')) {
+            document.getElementById('set_reup_media_type').value = config.reup_media_type || 'all';
+        }
         
         // Render danh sách link Fanpage từ config
         const container = document.getElementById('fanpage-urls-container');
@@ -491,7 +494,8 @@ async function saveSettings() {
         x_urls: document.getElementById('set_x_urls').value.split('\n').map(s => s.trim()).filter(s => s),
         threads_urls: document.getElementById('set_threads_urls').value.split('\n').map(s => s.trim()).filter(s => s),
         scan_times: document.getElementById('set_scan_times').value.trim(),
-        scan_limit: parseInt(document.getElementById('set_scan_limit').value) || 10
+        scan_limit: parseInt(document.getElementById('set_scan_limit').value) || 10,
+        reup_media_type: document.getElementById('set_reup_media_type') ? document.getElementById('set_reup_media_type').value : 'all'
     };
     
     try {

@@ -132,6 +132,112 @@ def _resolve_chromedriver_path(raw_path: str) -> str:
     return raw_path
 
 
+def _get_chrome_version() -> str:
+    """Read installed Chrome version from the Windows registry, falling back to binary."""
+    if sys.platform == "win32":
+        import winreg
+        for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+            for sub in (
+                r"Software\Google\Chrome\BLBeacon",
+                r"Software\Chromium\BLBeacon",
+            ):
+                try:
+                    key = winreg.OpenKey(hive, sub)
+                    val, _ = winreg.QueryValueEx(key, "version")
+                    winreg.CloseKey(key)
+                    return str(val).strip()
+                except Exception:
+                    pass
+    # Fallback: try the binary directly
+    chrome_paths = [
+        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+        "/usr/bin/google-chrome",
+        "/usr/bin/chromium-browser",
+    ]
+    for p in chrome_paths:
+        if os.path.isfile(p):
+            try:
+                out = subprocess.check_output(
+                    [p, "--version"], stderr=subprocess.DEVNULL, timeout=5
+                ).decode().strip()
+                m = re.search(r"([\d.]+)", out)
+                if m:
+                    return m.group(1)
+            except Exception:
+                pass
+    return ""
+
+
+def _find_best_cached_chromedriver() -> str:
+    """
+    Scan the webdriver-manager local cache (~/.wdm/drivers/chromedriver) and
+    return the ChromeDriver binary path whose version best matches the installed
+    Chrome. Matching priority: same major → same branch (3rd segment) → closest
+    patch (4th segment, i.e. the build number). Falls back to the newest cached
+    binary when no exact-major match is found.
+
+    Returns an empty string when no cached binary is found at all.
+    """
+    exe_name = "chromedriver.exe" if sys.platform == "win32" else "chromedriver"
+    wdm_root = os.path.join(os.path.expanduser("~"), ".wdm", "drivers", "chromedriver")
+    if not os.path.isdir(wdm_root):
+        return ""
+
+    chrome_ver = _get_chrome_version()  # e.g. "150.0.7871.187"
+    chrome_parts = [int(x) for x in chrome_ver.split(".") if x.isdigit()]
+
+    # Collect all chromedriver.exe files with their parsed version tuples
+    candidates = []  # list of (version_tuple, path)
+    for root, _dirs, files in os.walk(wdm_root):
+        if exe_name in files:
+            full = os.path.join(root, exe_name)
+            m = re.search(r"([\d]+\.[\d]+\.[\d]+\.[\d]+)", root)
+            if m:
+                ver_parts = tuple(int(x) for x in m.group(1).split("."))
+                candidates.append((ver_parts, full))
+
+    if not candidates:
+        return ""
+
+    # Sort newest-first so we prefer a more recent build when tie-breaking
+    candidates.sort(key=lambda x: x[0], reverse=True)
+
+    if not chrome_parts:
+        logger.info(f"[ChromeDriver] No Chrome version detected — using newest cached: {candidates[0][1]}")
+        return candidates[0][1]
+
+    chrome_major  = chrome_parts[0]
+    chrome_branch = chrome_parts[2] if len(chrome_parts) > 2 else 0  # 3rd segment
+    chrome_patch  = chrome_parts[3] if len(chrome_parts) > 3 else 0  # 4th segment
+
+    def _distance(ver_tuple):
+        """Lower = better match. Priority: major → branch → patch."""
+        if ver_tuple[0] != chrome_major:
+            return (10_000_000, 0)  # wrong major — deprioritize
+        branch_diff = abs(ver_tuple[2] - chrome_branch) if len(ver_tuple) > 2 else 9999
+        patch_diff  = abs(ver_tuple[3] - chrome_patch)  if len(ver_tuple) > 3 else 9999
+        # Weight: branch mismatch is much worse than patch mismatch
+        return (branch_diff * 10_000 + patch_diff, 0)
+
+    # Prefer same major + closest branch + closest patch
+    same_major = [(t, p) for t, p in candidates if t[0] == chrome_major]
+    if same_major:
+        best = min(same_major, key=lambda x: _distance(x[0]))
+        logger.info(
+            f"[ChromeDriver] Chrome {chrome_ver} → best cached driver "
+            f"{'.'.join(str(s) for s in best[0])}: {best[1]}"
+        )
+        return best[1]
+
+    # No same-major driver cached — take the newest available and warn
+    logger.warning(
+        f"[ChromeDriver] No cached driver for Chrome major {chrome_major}. "
+        f"Using newest cached: {candidates[0][1]}"
+    )
+    return candidates[0][1]
+
+
 def is_browser_disconnected_exception(e) -> bool:
     err_str = str(e).lower()
     indicators = [
@@ -163,14 +269,19 @@ class BrowserManager:
         
     def check_alive(self):
         if not self.driver: return False
-        # Fast socket check on remote debugging port to avoid urllib3 retry hangs
+        # Fast pre-check: connect to DevTools port on both IPv4 and IPv6
+        # (Chrome may bind to ::1 on some Windows configs, not 127.0.0.1)
         import socket
-        try:
-            with socket.create_connection(("127.0.0.1", 9222), timeout=0.5):
+        port_open = False
+        for host in ("127.0.0.1", "::1", "localhost"):
+            try:
+                with socket.create_connection((host, 9222), timeout=0.5):
+                    port_open = True
+                    break
+            except Exception:
                 pass
-        except Exception:
+        if not port_open:
             return False
-            
         try:
             _ = self.driver.current_url
             return True
@@ -178,7 +289,7 @@ class BrowserManager:
             return False
 
     def launch_browser(self):
-        # Kill conflicting Chrome processes (using port 9222 or our user data dir)
+        # Kill ONLY Chrome processes that use our specific profile dir — never kill other tools' Chrome
         user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "plugins", "data", "gams_insight", "user_data"))
         try:
             profile_dir_norm = os.path.normcase(os.path.normpath(user_data_dir))
@@ -192,10 +303,8 @@ class BrowserManager:
                     for arg in cmdline:
                         arg_val = arg.split("=", 1)[-1].strip('"\'')
                         arg_norm = os.path.normcase(os.path.normpath(arg_val))
+                        # Only kill if using OUR exact user-data-dir — do NOT kill by port (too broad)
                         if "user-data-dir" in arg and arg_norm == profile_dir_norm:
-                            should_kill = True
-                            break
-                        if "remote-debugging-port=9222" in arg:
                             should_kill = True
                             break
                     if should_kill:
@@ -219,6 +328,19 @@ class BrowserManager:
         options.add_argument("--silent")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-gpu")
+        options.add_argument("--no-first-run")
+        options.add_argument("--no-default-browser-check")
+        options.add_argument("--disable-extensions")            # faster startup
+        options.add_argument("--disable-background-networking") # reduce noise
+
+        # Prevent Chrome from restoring the previous session on startup
+        # (avoids leftover tabs like TikTok being opened instead of our target URL)
+        options.add_experimental_option("prefs", {
+            "profile.exit_type": "Normal",
+            "profile.exited_cleanly": True,
+            "session.restore_on_startup": 5,   # 5 = open specific URLs
+            "session.startup_urls": [],         # empty = open nothing extra
+        })
         
         user_data_dir = os.path.abspath(os.path.join(os.getcwd(), "plugins", "data", "gams_insight", "user_data"))
         options.add_argument(f"user-data-dir={user_data_dir}")
@@ -233,29 +355,71 @@ class BrowserManager:
                 except Exception as le:
                     logger.warning(f"Could not delete Chrome lock file {lock_path}: {le}")
 
-        try:
-            logger.info("Launching Chrome using Selenium Manager (built-in)...")
-            service = ChromeService()
-            if sys.platform == "win32":
-                import subprocess
-                try: service.creationflags = subprocess.CREATE_NO_WINDOW
-                except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
-            self.driver = webdriver.Chrome(service=service, options=options)
-            logger.info("Successfully launched Chrome using Selenium Manager.")
-        except Exception as manager_err:
-            logger.warning(f"Selenium Manager launch failed: {manager_err}. Falling back to ChromeDriverManager...")
+        def _try_launch(service_obj, label):
+            """Launch Chrome and verify session alive. Retries once if renderer isn't ready."""
+            for attempt in range(2):
+                try:
+                    drv = webdriver.Chrome(service=service_obj, options=options)
+                    # Brief wait so Chrome's renderer has time to initialise
+                    time.sleep(1.5 if attempt == 0 else 2.5)
+                    _ = drv.current_url  # Verify session is actually alive
+                    logger.info(f"Successfully launched Chrome using {label}.")
+                    return drv
+                except Exception as ve:
+                    err_msg = str(ve)
+                    if attempt == 0 and ("unable to connect to renderer" in err_msg.lower()
+                                         or "session not created" in err_msg.lower()):
+                        logger.warning(f"{label} attempt {attempt+1} failed (renderer not ready), retrying...")
+                        try: drv.quit()
+                        except: pass
+                        time.sleep(2)
+                        continue
+                    raise
+            return None  # Should not reach here
+
+        # --- Strategy 1: Try best cached ChromeDriver (avoids Selenium Manager version mismatch) ---
+        launched = False
+        cached_driver_path = _find_best_cached_chromedriver()
+        if cached_driver_path:
+            try:
+                logger.info(f"Launching Chrome using cached ChromeDriver: {cached_driver_path}")
+                service = ChromeService(cached_driver_path)
+                if sys.platform == "win32":
+                    try: service.creationflags = subprocess.CREATE_NO_WINDOW
+                    except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
+                self.driver = _try_launch(service, f"cached driver ({os.path.basename(cached_driver_path)})")
+                launched = True
+            except Exception as cached_err:
+                logger.warning(f"Cached ChromeDriver launch failed ({cached_err}). Trying Selenium Manager...")
+                self.driver = None
+
+        # --- Strategy 2: Selenium Manager built-in ---
+        if not launched:
+            try:
+                logger.info("Launching Chrome using Selenium Manager (built-in)...")
+                service = ChromeService()
+                if sys.platform == "win32":
+                    try: service.creationflags = subprocess.CREATE_NO_WINDOW
+                    except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
+                self.driver = _try_launch(service, "Selenium Manager")
+                launched = True
+            except Exception as manager_err:
+                logger.warning(f"Selenium Manager launch failed ({manager_err}). Trying webdriver-manager download...")
+                self.driver = None
+
+        # --- Strategy 3: webdriver-manager download ---
+        if not launched:
             try:
                 driver_path = ChromeDriverManager().install()
                 driver_path = _resolve_chromedriver_path(driver_path)
                 service = ChromeService(driver_path)
                 if sys.platform == "win32":
-                    import subprocess
                     try: service.creationflags = subprocess.CREATE_NO_WINDOW
                     except AttributeError: service.creation_flags = subprocess.CREATE_NO_WINDOW
-                self.driver = webdriver.Chrome(service=service, options=options)
-                logger.info("Successfully launched Chrome using ChromeDriverManager fallback.")
+                self.driver = _try_launch(service, "webdriver-manager download")
+                launched = True
             except Exception as e:
-                logger.error(f"Failed to launch Chrome driver with fallback: {e}")
+                logger.error(f"All ChromeDriver launch strategies failed: {e}")
                 raise e
 
     def close_browser(self):
