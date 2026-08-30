@@ -1,9 +1,0 @@
-2026/08/30-07:41:24.535 1c16c Reusing MANIFEST E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\IndexedDB\https_www.tiktok.com_0.indexeddb.leveldb/MANIFEST-000001
-2026/08/30-07:41:24.536 1c16c Recovering log #7
-2026/08/30-07:41:24.536 1c16c Reusing old log E:\Gams-AiJarvisOs\plugins\data\gams_insight\user_data\Default\IndexedDB\https_www.tiktok.com_0.indexeddb.leveldb/000007.log 
-2026/08/30-07:41:26.123 1c16c Compacting 1@1 + 1@2 files
-2026/08/30-07:41:26.187 1c16c Generated table #10@1: 853 keys, 17133 bytes
-2026/08/30-07:41:26.187 1c16c Compacted 1@1 + 1@2 files => 17133 bytes
-2026/08/30-07:41:26.193 1c16c compacted to: files[ 0 0 1 0 0 0 0 ]
-2026/08/30-07:41:26.193 1c16c Delete type=2 #5
-2026/08/30-07:41:26.193 1c16c Delete type=2 #8

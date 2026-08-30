@@ -1,9 +1,0 @@
-{
-    "id": "20260526_032554",
-    "task": "tool_generation",
-    "name": "Gams Ai Jarvis Os",
-    "requirement": "Sửa lỗi trong file jarvis_telegram_report_assistant.\nTraceback: 2026-05-26 03:22:44 | ERROR | jarvis_telegram_report_assistant | Error running bot service: No module named 'telegram'",
-    "status": "pending",
-    "workspace": "E:\\Gams Ai Jarvis Os",
-    "timestamp": "2026-05-26T03:25:54.722671"
-}
